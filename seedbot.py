@@ -92,16 +92,19 @@ class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
         global FriendList
         if event.type == nintendo_notification.NotificationType.FRIEND_REQUEST_COMPLETE:
             p = friend_functions.process_friend.from_pid(event.pid)
-            FriendList.lfcs.append(p)
+            FriendList.newlfcs.put(p)
             print("[",datetime.now(),"] LFCS received for",friend_functions.FormattedFriendCode(p.fc))
-            FriendList.lock.acquire()
-            FriendList.added = [x for x in FriendList.added if x.pid != event.pid]
-            FriendList.notadded = [x for x in FriendList.notadded if x.pid != event.pid]
-            FriendList.lock.release()
+            #FriendList.added = [x for x in FriendList.added if x.pid != event.pid]
+            #FriendList.notadded = [x for x in FriendList.notadded if x.pid != event.pid]
 ## Handle_LFCSQueue()
 ## iterate through lfcs queue and attempt to upload the data to the server
 def Handle_LFCSQueue():
     global NASCClient, FriendList, Web
+    while not FriendList.newlfcs.empty():
+        p = FriendList.newlfcs.get()
+        FriendList.lfcs.append(p)
+        FriendList.added = [x for x in FriendList.added if x.pid != p.pid]
+        print("[",datetime.now(),"] LFCS processed for",friend_functions.FormattedFriendCode(p.fc))
     while len(FriendList.lfcs) > 0 :
         p = FriendList.lfcs[0]
         if p.lfcs is None:
@@ -110,29 +113,40 @@ def Handle_LFCSQueue():
                 return False
             p.lfcs=rel.friend_code
         if Web.UpdateLFCS(p.fc,p.lfcs) == False:
-            print("[",datetime.now(),"] LFCS failed to uploaded for fc",p.fc)
+            print("[",datetime.now(),"] LFCS failed to uploaded for fc",friend_functions.FormattedFriendCode(p.fc))
             return False
         else:
-            print("[",datetime.now(),"] LFCS uploaded successfully for fc",p.fc)
-            FriendList.lock.acquire()
+            print("[",datetime.now(),"] LFCS uploaded successfully for fc",friend_functions.FormattedFriendCode(p.fc))
             FriendList.lfcs.pop(0)
-            FriendList.lock.release()
             FriendList.remove.append(p.pid)
     return True
 
 def Handle_FriendTimeouts():
     global FriendList, Web
     oldfriends = [x for x in FriendList.added if (datetime.utcnow()-timedelta(seconds=Intervals.friend_timeout)) > x.added_time]
-    FriendList.lock.acquire()
     FriendList.added = [x for x in FriendList.added if (datetime.utcnow()-timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
-    FriendList.lock.release()
     for x in oldfriends:
-        print("[",datetime.now(),"] Friend code timeout:",x.fc)
+        print("[",datetime.now(),"] Friend code timeout:",friend_functions.FormattedFriendCode(x.fc))
         if Web.TimeoutFC(x.fc):
             FriendList.remove.append(x.pid)
         else:
             return False
     return True
+
+def UnClaimAll():
+    global Web, FriendList
+    for x in FriendList.added[:]:
+        print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
+        if Web.ResetFC(x.fc)==True:
+            print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
+            FriendList.added.remove(x)
+            FriendList.remove.append(x.pid)
+    for x in FriendList.notadded[:]:
+        print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
+        if Web.ResetFC(x.fc)==True:
+            print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
+            FriendList.notadded.remove(x)
+            FriendList.remove.append(x.pid)
 
 def Handle_RemoveQueue():
     global NASCClient, FriendList
@@ -141,26 +155,20 @@ def Handle_RemoveQueue():
         pid = FriendList.remove[0]
         resp = NASCClient.RemoveFriendPID(pid)
         if resp==True:
-            FriendList.lock.acquire()
             FriendList.remove.pop(0)
-            FriendList.lock.release()
         else:
             return False
     return True
 
 def HandleNewFriends():
     global FriendList, NASCClient
-    FriendList.lock.acquire()
     FriendList.notadded = list(set(FriendList.notadded)) ## remove duplicates
-    FriendList.lock.release()
     while len(FriendList.notadded) > 0:
         curFriends = [x.fc for x in FriendList.added]
         curFriends.extend([x.fc for x in FriendList.lfcs])
         curFriends.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
         fc = FriendList.notadded[0]
-        FriendList.lock.acquire()
         FriendList.notadded.pop(0)
-        FriendList.lock.release()
         if not friend_functions.is_valid_fc(fc):
             continue
         if len([x for x in curFriends if x == fc]) > 0:
@@ -184,16 +192,23 @@ def sh_thread():
     #print("Running bot as",myFriendCode[0:4]+"-"+myFriendCode[4:8]+"-"+myFriendCode[8:])
     while RunSettings.Running==True:
         try:
+            
             if datetime.utcnow() < RunSettings.PauseUntil:
                 continue
+            if not Web.IsConnected():
+                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.error_wait)
+            if NASCClient.Error() > 0:
+                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
+                UnClaimAll()
+                RunSettings.active=0
+                Web.SetActive(0)
+                NASCClient.reconnect()
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
             ## unfriend anyone on my list that the website doesnt have for me
             FriendList.remove.extend([x.pid for x in FriendList.added if x.fc not in clist])
             ## remove the "others" from the added friends list
-            FriendList.lock.acquire()
             FriendList.added = [x for x in FriendList.added if x.fc in clist]
-            FriendList.lock.release()
             ## compare the claimed list with the current friends lists and add new friends to notadded
             addedfcs = [x.fc for x in FriendList.added]
             addedfcs.extend([x.fc for x in FriendList.notadded])
@@ -229,11 +244,8 @@ def sh_thread():
             time.sleep(Intervals.between_actions)
             HandleNewFriends()
 
-            if not Web.IsConnected():
-                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.error_wait)
-            if NASCClient.Error() > 0:
-                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
 
+    
         except Exception as e:
             print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
 
@@ -346,16 +358,19 @@ def presence_thread():
         time.sleep(30)
         update_presence()
 
-def website_heartbeat():
-    global Web
+
+
+def heartbeat_thread():
+    global Web, NASCClient
+    recwait = 0
     while True:
         Web.getNewList()
         RunSettings.BotterCount=Web.BottersOnlineCount()
         time.sleep(30)
 
-whb_thread_obj = threading.Thread(target=website_heartbeat)
+whb_thread_obj = threading.Thread(target=heartbeat_thread)
 whb_thread_obj.daemon = True
-whb_thread_obj.start = True
+whb_thread_obj.start()
 
 p_thread_obj = threading.Thread(target=presence_thread)
 p_thread_obj.daemon = True
