@@ -8,7 +8,7 @@ import time
 import logging
 from datetime import datetime, timedelta
 import threading
-
+import queue
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from const import Const
@@ -39,7 +39,7 @@ class FLists(object):
         self.added = list()
         self.lfcs = list()
         self.remove = list()
-        self.lock = threading.Lock()
+        self.newlfcs = queue.Queue()
 
 ## FC2PID(pid)
 ## convert a pid to the friend code
@@ -142,6 +142,7 @@ class NASCInteractor(object):
             self.client = friends.Friends3DSClient(self.backend)
             self.connected=True
     def reconnect(self):
+        self.ErrorCount=0
         self.backend.close()
         self.getNASCBits()
         self.backend.connect(self.host, self.port)
