@@ -29,27 +29,34 @@ class WebsiteHandler():
                 return 0
         else:
             self._ServerError()
+            return 0
 
 
     def getClaimedList(self):
-        fc_req = requests.get(self.url+"/getList.php", params={'me': self.myFC})
-        if fc_req.status_code == 200:
-            if not fc_req.text.startswith('error') and not fc_req.text.startswith('nothing'):
-                fc_list = [x for x in fc_req.text.split("\n") if len(x)==12]
-                return fc_list
-            else:
-                return []
+        try:
+            fc_req = requests.get(self.url+"/getList.php", params={'me': self.myFC})
+            if fc_req.status_code == 200:
+                if not fc_req.text.startswith('error') and not fc_req.text.startswith('nothing'):
+                    fc_list = [x for x in fc_req.text.split("\n") if len(x)==12]
+                    return fc_list
+                else:
+                    return []
+        except:
+            self._ServerError()
         return []
 
     def getNewList(self):
-        fc_req = requests.get(self.url+"/getfcs.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver})
-        if fc_req.status_code == 200:
-            self._ServerSuccess()
-            if not fc_req.text.startswith('error') and not fc_req.text.startswith('nothing'):
-                fc_list = [x for x in fc_req.text.split("\n") if len(x)==12]
-                return fc_list
-        else:    
-            print("[",datetime.now(),"] WebHandler: Generic Connection error",fc_req.status_code)
+        try:
+            fc_req = requests.get(self.url+"/getfcs.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver})
+            if fc_req.status_code == 200:
+                self._ServerSuccess()
+                if not fc_req.text.startswith('error') and not fc_req.text.startswith('nothing'):
+                    fc_list = [x for x in fc_req.text.split("\n") if len(x)==12]
+                    return fc_list
+            else:    
+                print("[",datetime.now(),"] WebHandler: Generic Connection error",fc_req.status_code)
+                self._ServerError()
+        except:
             self._ServerError()
         return []
 
