@@ -124,38 +124,36 @@ class NASCInteractor(object):
         self.port = int(port)
 
     def connect(self):
-        if not self.client is None:
-            self.reconnect()
-        else:
-            self.getNASCBits()
-            self.backend = backend.BackEndClient(
-                friends.FriendsTitle.ACCESS_KEY,
-                friends.FriendsTitle.NEX_VERSION,
-                backend.Settings("friends.cfg")
-            )
-            self.backend.connect(self.host, self.port)
-            self.backend.login(
-                self.pid, self.password,
-                auth_info = None,
-                login_data = authentication.AccountExtraInfo(168823937, 2134704128, 0, self.token),
-            )
-            self.client = friends.Friends3DSClient(self.backend)
-            self.connected=True
-    def reconnect(self):
         self.ErrorCount=0
-        self.backend.close()
+        if not self.client is None:
+            self.disconnect()
+            time.sleep(3)
         self.getNASCBits()
+        self.backend = backend.BackEndClient(
+            friends.FriendsTitle.ACCESS_KEY,
+            friends.FriendsTitle.NEX_VERSION,
+            backend.Settings("friends.cfg")
+        )
         self.backend.connect(self.host, self.port)
         self.backend.login(
             self.pid, self.password,
             auth_info = None,
             login_data = authentication.AccountExtraInfo(168823937, 2134704128, 0, self.token),
         )
+        self.client = friends.Friends3DSClient(self.backend)
         self.connected=True
     def disconnect(self):
+        self.ErrorCount=0
         self.backend.close()
+        self.backend = None
+        self.client = None
+        self.connected=False
+    def reconnect(self):
+        self.disconnect()
+        self.connect()
     def IsConnected(self):
-        return self.PRUDUP_isConnected()
+        self.connected = self.PRUDUP_isConnected()
+        return self.connected
     def PRUDUP_isConnected(self):
         ## client is Friends3dsClient
         ## client.client is backend.secure_client (service client)
