@@ -61,13 +61,16 @@ class WebsiteHandler():
         return []
 
     def UpdateLFCS(self,fc,lfcs):
-        lfcs_req = requests.get(self.url+"/setlfcs.php", params={'lfcs': '{:016x}'.format(lfcs),'fc':fc})
-        if lfcs_req.status_code == 200:
-            self._ServerSuccess()
-            if not lfcs_req.text.startswith('error'):
-                return True
-        else:
-            print("[",datetime.now(),"] WebHandler: Generic Connection error",lfcs_req.status_code)
+        try:
+            lfcs_req = requests.get(self.url+"/setlfcs.php", params={'lfcs': '{:016x}'.format(lfcs),'fc':fc})
+            if lfcs_req.status_code == 200:
+                self._ServerSuccess()
+                if not lfcs_req.text.startswith('error'):
+                    return True
+            else:
+                print("[",datetime.now(),"] WebHandler: Generic Connection error",lfcs_req.status_code)
+                self._ServerError()
+        except:
             self._ServerError()
         return False
 
@@ -102,3 +105,39 @@ class WebsiteHandler():
             print("[",datetime.now(),"] WebHandler: Generic Connection error",timeout_req.status_code)
             self._ServerError()
         return False
+    def GetBotSettings(self):
+        try:
+            run=True
+            toggle=False
+            settings_req = requests.get(self.url+"/botSettings.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver})
+            if settings_req.status_code == 200:
+                self._ServerSuccess()
+                if not settings_req.text.startswith('error'):
+                    for x in settings_req.text.split("\n"):
+                        if x.startswith("toggleactive="):
+                            if x.endswith("1"):
+                                toggle=True
+                            else:
+                                toggle=False
+                        if x.startswith("run="):
+                            if x.endswith("0"):
+                                run=False
+                            else:
+                                run=True
+            else:    
+                print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
+                self._ServerError()
+        except:
+            self._ServerError()
+        return toggle,run
+    def ResetBotSettings(self):
+        try:
+            settings_req = requests.get(self.url+"/botSettings.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver, 'run': '1', 'toggle':'0'})
+            if settings_req.status_code == 200:
+                self._ServerSuccess()
+            else:    
+                print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
+                self._ServerError()
+        except:
+            self._ServerError()
+        return True
