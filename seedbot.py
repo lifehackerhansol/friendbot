@@ -47,7 +47,7 @@ class Intervals(Const):
     get_friends=3
     error_wait = 10
     harderror_wait = 900
-    nintendo_wait = 7200
+    nintendo_wait = 1200
     friend_timeout = 600
     change_game = 700
     between_actions = 0.2
@@ -200,8 +200,8 @@ def sh_thread():
             if NASCClient.Error() > 0:
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
                 UnClaimAll()
-                RunSettings.active=0
-                Web.SetActive(0)
+                #RunSettings.active=0
+                #Web.SetActive(0)
                 NASCClient.reconnect()
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
@@ -289,6 +289,7 @@ class P1BotForm(npyscreen.FormBaseNew):
             self.lblConnected.value="Connected"
         else:
             self.lblConnected.value="Disconnected"
+        self.getFriendsCB.value=RunSettings.active == 1
         self.display() 
     def create(self): 
         #self.date_widget = self.add(npyscreen.FixedText, value=datetime.now(), editable=False) 
@@ -335,6 +336,7 @@ if RunSettings.UI == False:
     print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
 
 Web = webhandler.WebsiteHandler(weburl,RunSettings.friendcode,RunSettings.active,RunSettings.version)
+Web.ResetBotSettings()
 NASCClient.connect()
 NASCClient.SetNotificationHandler(NotificationHandler)
 
@@ -354,7 +356,7 @@ sh_thread_obj.start()
 
 def presence_thread():
     global RunSettings
-    while True:
+    while RunSettings.Running==True:
         time.sleep(30)
         update_presence()
 
@@ -363,7 +365,17 @@ def presence_thread():
 def heartbeat_thread():
     global Web, NASCClient
     recwait = 0
-    while True:
+    while RunSettings.Running==True:
+        Web.SetActive(RunSettings.active)
+        toggle,run = Web.GetBotSettings()
+        if toggle==True:
+            if RunSettings.active==1:
+                RunSettings.active=0
+            else:
+                RunSettings.active=1
+        Web.SetActive(RunSettings.active)
+        if RunSettings.Running!=False:
+            RunSettings.Running=run
         Web.getNewList()
         RunSettings.BotterCount=Web.BottersOnlineCount()
         time.sleep(30)
