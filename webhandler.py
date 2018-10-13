@@ -1,4 +1,5 @@
 import requests
+import logging
 from datetime import datetime, timedelta
 
 class WebsiteHandler():
@@ -20,16 +21,20 @@ class WebsiteHandler():
         self.ErrorCount=0
 
     def BottersOnlineCount(self):
-        botter_list = requests.get(self.url+"/botters.php")
-        if botter_list.status_code == 200:
-            self._ServerSuccess
-            try: 
-                return int(botter_list.text.split("\n")[0])
-            except ValueError:
-                return 0
-        else:
-            self._ServerError()
-            return 0
+        try:
+            botter_list = requests.get(self.url+"/botters.php")
+            if botter_list.status_code == 200:
+                self._ServerSuccess
+                try: 
+                    return int(botter_list.text.split("\n")[0])
+                except ValueError:
+                    return 0
+            else:
+                logging.warning("Server responded with HTTP code %s",botter_list.status_code)
+        except Exception as e:
+            logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+        self._ServerError()
+        return 0
 
 
     def getClaimedList(self):
@@ -41,6 +46,8 @@ class WebsiteHandler():
                     return fc_list
                 else:
                     return []
+            else:
+                logging.warning("Server responded with HTTP code %s",fc_req.status_code)
         except:
             self._ServerError()
         return []
@@ -54,6 +61,7 @@ class WebsiteHandler():
                     fc_list = [x for x in fc_req.text.split("\n") if len(x)==12]
                     return fc_list
             else:    
+                logging.warning("Server responded with HTTP code %s",fc_req.status_code)
                 print("[",datetime.now(),"] WebHandler: Generic Connection error",fc_req.status_code)
                 self._ServerError()
         except:
@@ -68,6 +76,7 @@ class WebsiteHandler():
                 if not lfcs_req.text.startswith('error'):
                     return True
             else:
+                logging.warning("Server responded with HTTP code %s",lfcs_req.status_code)
                 print("[",datetime.now(),"] WebHandler: Generic Connection error",lfcs_req.status_code)
                 self._ServerError()
         except:
@@ -81,6 +90,7 @@ class WebsiteHandler():
             if not timeout_req.text.startswith('error'):
                 return True
         else:
+            logging.warning("Server responded with HTTP code %s",timeout_req.status_code)
             print("[",datetime.now(),"] WebHandler: Generic Connection error",timeout_req.status_code)
             self._ServerError()
         return False
@@ -92,6 +102,7 @@ class WebsiteHandler():
             if resp.text.startswith('success'):
                 return True
         else:
+            logging.warning("Server responded with HTTP code %s",resp.status_code)
             print("[",datetime.now(),"] Generic Connection issue:",resp.status_code)
             self._ServerError()
         return False
@@ -102,7 +113,8 @@ class WebsiteHandler():
             if not reset_req.text.startswith('error'):
                 return True
         else:
-            print("[",datetime.now(),"] WebHandler: Generic Connection error",timeout_req.status_code)
+            logging.warning("Server responded with HTTP code %s",reset_req.status_code)
+            print("[",datetime.now(),"] WebHandler: Generic Connection error",reset_req.status_code)
             self._ServerError()
         return False
     def GetBotSettings(self):
@@ -116,15 +128,20 @@ class WebsiteHandler():
                     for x in settings_req.text.split("\n"):
                         if x.startswith("toggleactive="):
                             if x.endswith("1"):
+                                logging.debug("ToggleActive = %s",1)
                                 toggle=True
                             else:
+                                logging.debug("ToggleActive = %s",0)
                                 toggle=False
                         if x.startswith("run="):
                             if x.endswith("0"):
+                                logging.debug("Run = %s",0)
                                 run=False
                             else:
+                                logging.debug("Run = %s",1)
                                 run=True
             else:    
+                logging.warning("Server responded with HTTP code %s",settings_req.status_code)
                 print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
                 self._ServerError()
         except:
@@ -136,6 +153,7 @@ class WebsiteHandler():
             if settings_req.status_code == 200:
                 self._ServerSuccess()
             else:    
+                logging.warning("Server responded with HTTP code %s",settings_req.status_code)
                 print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
                 self._ServerError()
         except:
