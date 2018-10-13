@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 sys.path.append("./NintendoClients")
 from nintendo.nex import nintendo_notification
 
-logging.basicConfig(level=logging.WARN)
-
+#logging.basicConfig(level=logging.WARN)
+logging.basicConfig(filename='error.log',filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
 class cSettings(object):
     def __init__(self,pid,lfcs):
         self.UI = True
@@ -93,6 +93,7 @@ class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
         if event.type == nintendo_notification.NotificationType.FRIEND_REQUEST_COMPLETE:
             p = friend_functions.process_friend.from_pid(event.pid)
             FriendList.newlfcs.put(p)
+            logging.info("LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS received for",friend_functions.FormattedFriendCode(p.fc))
             #FriendList.added = [x for x in FriendList.added if x.pid != event.pid]
             #FriendList.notadded = [x for x in FriendList.notadded if x.pid != event.pid]
@@ -104,6 +105,7 @@ def Handle_LFCSQueue():
         p = FriendList.newlfcs.get()
         FriendList.lfcs.append(p)
         FriendList.added = [x for x in FriendList.added if x.pid != p.pid]
+        logging.info("LFCS processed for %s",friend_functions.FormattedFriendCode(p.fc))
         print("[",datetime.now(),"] LFCS processed for",friend_functions.FormattedFriendCode(p.fc))
     while len(FriendList.lfcs) > 0 :
         p = FriendList.lfcs[0]
@@ -113,9 +115,11 @@ def Handle_LFCSQueue():
                 return False
             p.lfcs=rel.friend_code
         if Web.UpdateLFCS(p.fc,p.lfcs) == False:
+            logging.warning("LFCS failed to upload for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS failed to uploaded for fc",friend_functions.FormattedFriendCode(p.fc))
             return False
         else:
+            logging.info("LFCS uploaded successfully for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS uploaded successfully for fc",friend_functions.FormattedFriendCode(p.fc))
             FriendList.lfcs.pop(0)
             FriendList.remove.append(p.pid)
@@ -126,6 +130,7 @@ def Handle_FriendTimeouts():
     oldfriends = [x for x in FriendList.added if (datetime.utcnow()-timedelta(seconds=Intervals.friend_timeout)) > x.added_time]
     FriendList.added = [x for x in FriendList.added if (datetime.utcnow()-timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
     for x in oldfriends:
+        logging.warning("Friend Code Timeout: %s",friend_functions.FormattedFriendCode(x.fc))
         print("[",datetime.now(),"] Friend code timeout:",friend_functions.FormattedFriendCode(x.fc))
         if Web.TimeoutFC(x.fc):
             FriendList.remove.append(x.pid)
@@ -136,14 +141,18 @@ def Handle_FriendTimeouts():
 def UnClaimAll():
     global Web, FriendList
     for x in FriendList.added[:]:
+        logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x.fc))
         print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
         if Web.ResetFC(x.fc)==True:
+            logging.info("Successfully unclaimed %s",friend_functions.FormattedFriendCode(x.fc))
             print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
             FriendList.added.remove(x)
             FriendList.remove.append(x.pid)
     for x in FriendList.notadded[:]:
+        logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x.fc))
         print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
         if Web.ResetFC(x.fc)==True:
+            logging.info("Successfully unclaimed %s",friend_functions.FormattedFriendCode(x.fc))
             print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
             FriendList.notadded.remove(x)
             FriendList.remove.append(x.pid)
@@ -173,11 +182,13 @@ def HandleNewFriends():
             continue
         if len([x for x in curFriends if x == fc]) > 0:
             continue
+        logging.info("Adding friend %s",friend_functions.FormattedFriendCode(fc))
         print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
         time.sleep(Intervals.betweenNintendoActions)
         rel = NASCClient.AddFriendFC(fc)
         if not rel is None:
             if rel.is_complete==True:
+                logging.warning("Friend %s already completed, moving to LFCS list",friend_functions.FormattedFriendCode(fc))
                 print(fc,": Friend already completed, moving to LFCS list")
                 p = friend_functions.process_friend(fc)
                 p.lfcs = rel.friend_code
@@ -216,23 +227,28 @@ def sh_thread():
             addedfcs.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
             clist = [x for x in clist if not x in addedfcs and len(x)==12]
             if len(clist) > 0:
+                logging.warning("%s friends already claimed, queued for adding", len(clist))
                 print (len(clist)," friends already claimed, queued for adding")
             FriendList.notadded.extend(clist)
             time.sleep(Intervals.between_actions)
             ## iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_LFCSQueue():
+                logging.error("Could not completed LFCS queue processing")
                 print("[",datetime.now(),"] could not complete LFCS queue processing")
             time.sleep(Intervals.between_actions)
             ## true if it makes it through the list, false otherwise
             if not Handle_FriendTimeouts():
+                logging.error("Could not completed friend timeout processing")
                 print("[",datetime.now(),"] could not Timeout old friends")
             time.sleep(Intervals.between_actions)
             ## iterates through removal queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_RemoveQueue():
+                logging.error("Could not completed Remove queue processing")
                 print("[",datetime.now(),"] Could not handle RemoveQueue")
                 continue
             if datetime.utcnow() >= RunSettings.WaitForFriending:
                 time.sleep(Intervals.between_actions)
+                logging.debug("Getting new FCs")
                 print("[",datetime.now(),"] Quest: seeking new friends for the end of the world")
                 nlist = Web.getNewList()
                 for x in nlist:
@@ -240,6 +256,7 @@ def sh_thread():
                         FriendList.notadded.append(x)
                 RunSettings.WaitForFriending = datetime.utcnow()+timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
+                logging.debug("%s new FCs to process", len(FriendList.notadded))
                 print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
             time.sleep(Intervals.between_actions)
             HandleNewFriends()
@@ -248,7 +265,7 @@ def sh_thread():
     
         except Exception as e:
             print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
-
+            logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
 class ExitButton(npyscreen.ButtonPress):
     def whenPressed(self):
         self.parent.parentApp.switchForm(None)
@@ -363,7 +380,7 @@ def presence_thread():
 
 
 def heartbeat_thread():
-    global Web, NASCClient
+    global Web, NASCClient,RunSettings
     recwait = 0
     while RunSettings.Running==True:
         Web.SetActive(RunSettings.active)
