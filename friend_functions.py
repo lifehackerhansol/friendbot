@@ -156,9 +156,13 @@ class NASCInteractor(object):
         return self.connected
     def PRUDUP_isConnected(self):
         ## client is Friends3dsClient
+        if not self.client is None:
         ## client.client is backend.secure_client (service client)
+            if not self.client.client is None:
         ## client.client.client is prudp client (which is what i see failing)
-        return self.client.client.client.is_connected()
+                if not self.client.client.client is None:
+                    return self.client.client.client.is_connected()
+        return False
     def SetNotificationHandler(self,handler_function):
         if self.connected == True:
             self.backend.nintendo_notification_server.handler = handler_function()
