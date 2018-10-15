@@ -28,7 +28,7 @@ class process_friend:
         self.fc = fc
         self.pid = int(fc) & 0xffffffff
         self.added_time = datetime.utcnow()
-        self.resync_time = datetime.utcnow()+datetime.timedelta(seconds=resync_interval)
+        self.resync_time = datetime.utcnow()+timedelta(seconds=resync_interval)
         self.lfcs = None
     @classmethod
     def from_pid(cls, pid, resync_interval=300):
