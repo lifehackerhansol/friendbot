@@ -39,6 +39,7 @@ class cSettings(object):
         self.CurrentGame = 0x0004000000131200
         self.PauseUntil = datetime.utcnow()
         self.WaitForFriending = datetime.utcnow()
+        self.WaitForResync = datetime.utcnow()
     def UpdateRunTime(self):
         self.RunTime = str(datetime.utcnow() - self.StartTime).split(".")[0]
 
@@ -49,7 +50,7 @@ class Intervals(Const):
     harderror_wait = 900
     nintendo_wait = 1200
     friend_timeout = 600
-    resync = 60
+    resync = 15
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
@@ -141,27 +142,26 @@ def Handle_FriendTimeouts():
 
 def Handle_ReSync():
     global FriendList, NASCClient
-    oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
-    FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
-    for x in oldfriends:
-        x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
-        logging.warning("Friend not dumped, refreshing: %s",friend_functions.FormattedFriendCode(x.fc))
-        print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
-        try:
-            rel = NASCClient.RefreshFriendData(x.pid)
-            if rel is None:
-                FriendList.added.append(x)
-                continue
-            if rel.is_complete == True:
-                logging.info("Friend was completed all along: %s",friend_functions.FormattedFriendCode(x.fc))
-                x.lfcs=rel.friend_code
-                FriendList.lfcs.append(x)
+    try:
+        friends = NASCClient.GetAllFriends()
+    except:
+        friends = []
+    #oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
+    #FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
+    try:
+        for x in friends:
+            #x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
+            logging.debug("Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
+            #print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
+            if x.is_complete == True and len([y for y in FriendList.added if y.pid == x.principal_id]) > 0:
+                p = friend_functions.process_friend.from_pid(x.principal_id)
+                p.lfcs = x.friend_code
+                logging.info("Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+                FriendList.newlfcs.put(p)
             else:
-                logging.debug("Friend wasnt complete: %s",friend_functions.FormattedFriendCode(x.fc))
-                FriendList.added.append(x)
-        except:
-            FriendList.added.append(x)
-            continue
+                logging.debug("Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
+    except:
+        return False
     return True
 
 def UnClaimAll():
@@ -256,6 +256,12 @@ def sh_thread():
                 logging.warning("%s friends already claimed, queued for adding", len(clist))
                 print (len(clist)," friends already claimed, queued for adding")
             FriendList.notadded.extend(clist)
+            ## Receives current relationship status for all friends, then iterates through them to set the lfcs status if not currently set
+            if datetime.utcnow() >= RunSettings.WaitForResync:
+                time.sleep(Intervals.between_actions)
+                logging.debug("Resyncing friend list")
+                Handle_ReSync()
+                RunSettings.WaitForResync = datetime.utcnow()+timedelta(seconds=Intervals.resync)
             time.sleep(Intervals.between_actions)
             ## iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_LFCSQueue():
@@ -266,8 +272,6 @@ def sh_thread():
             if not Handle_FriendTimeouts():
                 logging.error("Could not completed friend timeout processing")
                 print("[",datetime.now(),"] could not Timeout old friends")
-            time.sleep(Intervals.between_actions)
-            Handle_ReSync()
             time.sleep(Intervals.between_actions)
             ## iterates through removal queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_RemoveQueue():
