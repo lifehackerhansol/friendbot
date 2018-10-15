@@ -23,7 +23,7 @@ from nintendo.nex import nintendo_notification
 logging.basicConfig(filename='error.log',filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
 class cSettings(object):
     def __init__(self,pid,lfcs):
-        self.UI = True
+        self.UI = False
         self.version = 0x200
         self.active=1
         self.friendcode = friend_functions.PID2FC(pid)
@@ -49,7 +49,7 @@ class Intervals(Const):
     harderror_wait = 900
     nintendo_wait = 1200
     friend_timeout = 600
-    resync = 300
+    resync = 60
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
@@ -219,7 +219,7 @@ def HandleNewFriends():
                 FriendList.lfcs.append(p)
                 #added_friends = [x for x in added_friends if x.pid != p.pid]
             else:
-                FriendList.added.append(friend_functions.process_friend(fc,Intervals.resync))
+                FriendList.added.append(friend_functions.process_friend(fc))
 
 
 def sh_thread():
@@ -388,7 +388,12 @@ NASCClient.SetNotificationHandler(NotificationHandler)
 flist = []
 flist.extend(NASCClient.GetAllFriends())
 for r in flist:
-    FriendList.added.append(friend_functions.process_friend.from_pid(r.principal_id,Intervals.resync))
+    p=friend_functions.process_friend.from_pid(r.principal_id,1200)
+    if not r.is_complete == True:
+        FriendList.added.append(p)
+    else:
+        p.lfcs = r.friend_code
+        FriendList.lfcs.append(p)
 RunSettings.CurrentGame = random.choice(random_games)
 update_presence()
 
