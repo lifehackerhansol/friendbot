@@ -153,9 +153,11 @@ def Handle_ReSync():
                 FriendList.added.append(x)
                 continue
             if rel.is_complete == True:
+                logging.info("Friend was completed all along: %s",friend_functions.FormattedFriendCode(x.fc))
                 x.lfcs=rel.friend_code
                 FriendList.lfcs.append(x)
             else:
+                logging.debug("Friend wasnt complete: %s",friend_functions.FormattedFriendCode(x.fc))
                 FriendList.added.append(x)
         except:
             FriendList.added.append(x)
