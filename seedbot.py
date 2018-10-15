@@ -142,7 +142,7 @@ def Handle_FriendTimeouts():
 def Handle_ReSync():
     global FriendList, NASCClient
     oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
-    FriendList = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
+    FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
     for x in oldfriends:
         x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
         logging.warning("Friend not dumped, refreshing: %s",friend_functions.FormattedFriendCode(x.fc))
