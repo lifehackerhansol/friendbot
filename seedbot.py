@@ -49,6 +49,7 @@ class Intervals(Const):
     harderror_wait = 900
     nintendo_wait = 1200
     friend_timeout = 600
+    readd = 300
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
@@ -138,6 +139,22 @@ def Handle_FriendTimeouts():
             return False
     return True
 
+def Handle_ReSync():
+    global FriendList, NASCClient
+    for x in FriendList.added[:]:
+        if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync)):
+            logging.warning("Friend not dumped, refreshing: %s",friend_functions.FormattedFriendCode(x.fc))
+            print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
+            rel = NASCClient.RefreshFriendData(x.pid)
+            if rel is None:
+                continue
+            if rel.is_complete == True:
+                x.lfcs=rel.friend_code
+                FriendList.lfcs.append(x)
+                FriendList.added.remove(x)
+            x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
+    return True
+
 def UnClaimAll():
     global Web, FriendList
     for x in FriendList.added[:]:
@@ -195,7 +212,7 @@ def HandleNewFriends():
                 FriendList.lfcs.append(p)
                 #added_friends = [x for x in added_friends if x.pid != p.pid]
             else:
-                FriendList.added.append(friend_functions.process_friend(fc))
+                FriendList.added.append(friend_functions.process_friend(fc,Intervals.resync))
 
 
 def sh_thread():
@@ -240,6 +257,8 @@ def sh_thread():
             if not Handle_FriendTimeouts():
                 logging.error("Could not completed friend timeout processing")
                 print("[",datetime.now(),"] could not Timeout old friends")
+            time.sleep(Intervals.between_actions)
+            Handle_ReSync()
             time.sleep(Intervals.between_actions)
             ## iterates through removal queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_RemoveQueue():
@@ -362,7 +381,7 @@ NASCClient.SetNotificationHandler(NotificationHandler)
 flist = []
 flist.extend(NASCClient.GetAllFriends())
 for r in flist:
-    FriendList.added.append(friend_functions.process_friend.from_pid(r.principal_id))
+    FriendList.added.append(friend_functions.process_friend.from_pid(r.principal_id,Intervals.resync))
 RunSettings.CurrentGame = random.choice(random_games)
 update_presence()
 

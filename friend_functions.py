@@ -24,14 +24,15 @@ class NINTENDO_SERVER_ERROR(Const):
 
 
 class process_friend:
-    def __init__(self, fc):
+    def __init__(self, fc, resync_interval=300):
         self.fc = fc
         self.pid = int(fc) & 0xffffffff
         self.added_time = datetime.utcnow()
+        self.resync_time = datetime.utcnow()+datetime.timedelta(seconds=resync_interval)
         self.lfcs = None
     @classmethod
-    def from_pid(cls, pid):
-        return cls(PID2FC(pid))
+    def from_pid(cls, pid, resync_interval=300):
+        return cls(PID2FC(pid),resync_interval)
 
 class FLists(object):
     def __init__(self):
