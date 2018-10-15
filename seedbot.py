@@ -141,18 +141,25 @@ def Handle_FriendTimeouts():
 
 def Handle_ReSync():
     global FriendList, NASCClient
-    for x in FriendList.added[:]:
-        if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync)):
-            logging.warning("Friend not dumped, refreshing: %s",friend_functions.FormattedFriendCode(x.fc))
-            print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
+    oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
+    FriendList = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
+    for x in oldfriends:
+        x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
+        logging.warning("Friend not dumped, refreshing: %s",friend_functions.FormattedFriendCode(x.fc))
+        print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
+        try:
             rel = NASCClient.RefreshFriendData(x.pid)
             if rel is None:
+                FriendList.added.append(x)
                 continue
             if rel.is_complete == True:
                 x.lfcs=rel.friend_code
                 FriendList.lfcs.append(x)
-                FriendList.added.remove(x)
-            x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
+            else:
+                FriendList.added.append(x)
+        except:
+            FriendList.added.append(x)
+            continue
     return True
 
 def UnClaimAll():
