@@ -105,6 +105,9 @@ def Handle_LFCSQueue():
     global NASCClient, FriendList, Web
     while not FriendList.newlfcs.empty():
         p = FriendList.newlfcs.get()
+        ## already added to lfcs queue
+        if len([x for x in FriendList.lfcs if x.pid == p.pid]) > 0:
+            continue
         FriendList.lfcs.append(p)
         FriendList.added = [x for x in FriendList.added if x.pid != p.pid]
         logging.info("LFCS processed for %s",friend_functions.FormattedFriendCode(p.fc))
