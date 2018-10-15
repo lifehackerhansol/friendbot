@@ -49,7 +49,7 @@ class Intervals(Const):
     harderror_wait = 900
     nintendo_wait = 1200
     friend_timeout = 600
-    readd = 300
+    resync = 300
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
