@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 sys.path.append("./NintendoClients")
 from nintendo.nex import nintendo_notification
-logname = "error.log" + datetime.now().strftime('%Y%m%d_%H%M%S')
+logname = "error_" + datetime.now().strftime('%Y%m%d_%H%M%S') + ".log"
 #logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname,filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
 class cSettings(object):
@@ -201,19 +201,24 @@ def Handle_RemoveQueue():
 def HandleNewFriends():
     global FriendList, NASCClient
     FriendList.notadded = list(set(FriendList.notadded)) ## remove duplicates
-    while len(FriendList.notadded) > 0:
+    for fc in FriendList.notadded[:]:
+    #while len(FriendList.notadded) > 0:
         curFriends = [x.fc for x in FriendList.added]
         curFriends.extend([x.fc for x in FriendList.lfcs])
         curFriends.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
-        fc = FriendList.notadded[0]
-        FriendList.notadded.pop(0)
+        #fc = FriendList.notadded[0]
+        # remove from the actual list
+        FriendList.notadded.remove(fc)
+        # if not a valid friend, go to the next in the list
         if not friend_functions.is_valid_fc(fc):
             continue
+        # if already on one of our lists, go to the next on the list
         if len([x for x in curFriends if x == fc]) > 0:
             continue
         logging.info("Adding friend %s",friend_functions.FormattedFriendCode(fc))
         print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
         time.sleep(Intervals.betweenNintendoActions)
+        #TODO error check this vvv
         rel = NASCClient.AddFriendFC(fc)
         if not rel is None:
             if rel.is_complete==True:
