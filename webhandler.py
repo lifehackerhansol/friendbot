@@ -77,9 +77,13 @@ class WebsiteHandler():
                     return True
             else:
                 logging.warning("Server responded with HTTP code %s",lfcs_req.status_code)
+                logging.warning("Server response: %s",lfcs_req.text)
                 print("[",datetime.now(),"] WebHandler: Generic Connection error",lfcs_req.status_code)
+                print("[",datetime.now(),"] Server response:",lfcs_req.text)
                 self._ServerError()
-        except:
+        except Exception as e:
+            print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+            logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
             self._ServerError()
         return False
 

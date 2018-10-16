@@ -18,9 +18,9 @@ from datetime import datetime, timedelta
 
 sys.path.append("./NintendoClients")
 from nintendo.nex import nintendo_notification
-
+logname = "error.log" + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 #logging.basicConfig(level=logging.WARN)
-logging.basicConfig(filename='error.log',filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
+logging.basicConfig(filename=logname,filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
 class cSettings(object):
     def __init__(self,pid,lfcs):
         self.UI = False
@@ -112,21 +112,23 @@ def Handle_LFCSQueue():
         FriendList.added = [x for x in FriendList.added if x.pid != p.pid]
         logging.info("LFCS processed for %s",friend_functions.FormattedFriendCode(p.fc))
         print("[",datetime.now(),"] LFCS processed for",friend_functions.FormattedFriendCode(p.fc))
-    while len(FriendList.lfcs) > 0 :
-        p = FriendList.lfcs[0]
+    for x in FriendList.lfcs[:]:
+        p = x
+        FriendList.lfcs.remove(x)
         if p.lfcs is None:
             rel = NASCClient.RefreshFriendData(p.pid)
             if rel is None:
-                return False
+                FriendList.lfcs.append(p)
+                continue
             p.lfcs=rel.friend_code
         if Web.UpdateLFCS(p.fc,p.lfcs) == False:
             logging.warning("LFCS failed to upload for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS failed to uploaded for fc",friend_functions.FormattedFriendCode(p.fc))
-            return False
+            FriendList.lfcs.append(p)
+            continue
         else:
             logging.info("LFCS uploaded successfully for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS uploaded successfully for fc",friend_functions.FormattedFriendCode(p.fc))
-            FriendList.lfcs.pop(0)
             FriendList.remove.append(p.pid)
     return True
 
@@ -188,14 +190,12 @@ def UnClaimAll():
 
 def Handle_RemoveQueue():
     global NASCClient, FriendList
-    while len(FriendList.remove) > 0:
+    for x in FriendList.remove[:]:
         time.sleep(Intervals.betweenNintendoActions)
-        pid = FriendList.remove[0]
-        resp = NASCClient.RemoveFriendPID(pid)
+        #pid = x
+        resp = NASCClient.RemoveFriendPID(x)
         if resp==True:
-            FriendList.remove.pop(0)
-        else:
-            return False
+            FriendList.remove.remove(x)
     return True
 
 def HandleNewFriends():
