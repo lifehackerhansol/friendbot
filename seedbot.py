@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 sys.path.append("./NintendoClients")
 from nintendo.nex import nintendo_notification
-logname = "error.log" + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+logname = "error.log" + datetime.now().strftime('%Y%m%d_%H%M%S')
 #logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname,filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
 class cSettings(object):
