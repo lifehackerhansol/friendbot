@@ -222,9 +222,11 @@ class NASCInteractor(object):
             presence = friends.NintendoPresenceV1(0xffffffff, friends.GameKey(gameid, 0), msg, 0, 0, 0, 0, 0, 0, b"")
             self.client.update_presence(presence, Unk)
     def GetAllFriends(self):
-        if not self.PRUDUP_isConnected():
+        try:
+            x = self.client.get_all_friends()
+            logging.info("Got all friends:",len(x))
+            self._ConnectionSuccess()
+            return x
+        except:
             self._ConnectionError()
             return []
-        else:
-            self._ConnectionSuccess()
-            return self.client.get_all_friends()

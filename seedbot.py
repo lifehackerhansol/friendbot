@@ -150,7 +150,9 @@ def Handle_ReSync():
     friends = []
     try:
         friends = NASCClient.GetAllFriends()
-    except:
+    except Exception as e:
+        print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+        logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         friends = []
     #oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
     #FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
