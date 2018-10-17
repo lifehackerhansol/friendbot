@@ -144,11 +144,13 @@ class NASCInteractor(object):
         self.client = friends.Friends3DSClient(self.backend)
         self.connected=True
     def disconnect(self):
-        self.ErrorCount=0
-        self.backend.close()
-        self.backend = None
-        self.client = None
-        self.connected=False
+        if not self.backend is None:
+            self.ErrorCount=0
+            self.backend.close()
+            self.backend = None
+            self.client = None
+            self.connected=False
+        
     def reconnect(self):
         self.disconnect()
         self.connect()

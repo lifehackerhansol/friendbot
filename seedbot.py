@@ -45,7 +45,7 @@ class cSettings(object):
 
 
 class Intervals(Const):
-    get_friends=3
+    get_friends=5
     error_wait = 10
     harderror_wait = 900
     nintendo_wait = 1200
@@ -147,6 +147,7 @@ def Handle_FriendTimeouts():
 
 def Handle_ReSync():
     global FriendList, NASCClient
+    friends = []
     try:
         friends = NASCClient.GetAllFriends()
     except:
@@ -154,18 +155,23 @@ def Handle_ReSync():
     #oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
     #FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
     try:
+        print("[",datetime.now(),"] ReSync:",len(friends),"friends currently")
         for x in friends:
             #x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
-            logging.debug("Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
+            logging.debug("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
             #print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
             if x.is_complete == True and len([y for y in FriendList.added if y.pid == x.principal_id]) > 0:
                 p = friend_functions.process_friend.from_pid(x.principal_id)
                 p.lfcs = x.friend_code
-                logging.info("Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+                logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+                print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
                 FriendList.newlfcs.put(p)
             else:
-                logging.debug("Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
-    except:
+                logging.debug("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
+    except Exception as e:
+        print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+        logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+        
         return False
     return True
 
@@ -222,8 +228,8 @@ def HandleNewFriends():
         rel = NASCClient.AddFriendFC(fc)
         if not rel is None:
             if rel.is_complete==True:
-                logging.warning("Friend %s already completed, moving to LFCS list",friend_functions.FormattedFriendCode(fc))
-                print(fc,": Friend already completed, moving to LFCS list")
+                logging.warning("NewFriends: Friend %s already completed, moving to LFCS list",friend_functions.FormattedFriendCode(fc))
+                print("[",datetime.now(),"] NewFriends: Friend",friend_functions.FormattedFriendCode(fc),"already completed, moving to LFCS list")
                 p = friend_functions.process_friend(fc)
                 p.lfcs = rel.friend_code
                 FriendList.lfcs.append(p)
