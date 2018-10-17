@@ -224,7 +224,7 @@ class NASCInteractor(object):
     def GetAllFriends(self):
         try:
             x = self.client.get_all_friends()
-            logging.info("Got all friends:",len(x))
+            logging.info("Got all friends: %s",len(x))
             self._ConnectionSuccess()
             return x
         except:
