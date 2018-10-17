@@ -50,7 +50,7 @@ class Intervals(Const):
     harderror_wait = 900
     nintendo_wait = 1200
     friend_timeout = 600
-    resync = 15
+    resync = 30
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
@@ -149,21 +149,17 @@ def Handle_ReSync():
     global FriendList, NASCClient
     friends = []
     try:
-        friends = NASCClient.GetAllFriends()
+        friends = NASCClient.RefreshAllFriendData([x.pid for x in FriendList.added])
     except Exception as e:
         print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         friends = []
-    #oldfriends = [x for x in FriendList.added if x.resync_time <= (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
-    #FriendList.added = [x for x in FriendList.added if x.resync_time > (datetime.utcnow()-timedelta(seconds=Intervals.resync))]
     try:
         print("[",datetime.now(),"] ReSync:",len(friends),"friends currently")
         for x in friends:
-            #x.resync_time=datetime.utcnow()+timedelta(seconds=Intervals.resync)
             logging.debug("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
-            #print("[",datetime.now(),"] Friend not dumped, refreshing:",friend_functions.FormattedFriendCode(x.fc))
-            if x.is_complete == True and len([y for y in FriendList.added if y.pid == x.principal_id]) > 0:
-                p = friend_functions.process_friend.from_pid(x.principal_id)
+            p = friend_functions.process_friend.from_pid(x.principal_id)
+            if x.is_complete == True:
                 p.lfcs = x.friend_code
                 logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
                 print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
@@ -173,7 +169,6 @@ def Handle_ReSync():
     except Exception as e:
         print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
-        
         return False
     return True
 
