@@ -213,6 +213,13 @@ class NASCInteractor(object):
         else:
             self._ConnectionSuccess()
             return self.client.sync_friend(self.lfcs, [pid], [])[0]
+    def RefreshAllFriendData(self,pids):
+        try:
+            self._ConnectionSuccess()
+            return self.client.sync_friend(self.lfcs, pids, [])[0]
+        except:
+            self._ConnectionError()
+            return []
     def UpdatePresence(self,gameid,msg,Unk = True):
         if not self.PRUDUP_isConnected():
             self._ConnectionError()
