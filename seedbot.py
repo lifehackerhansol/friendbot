@@ -157,7 +157,7 @@ def Handle_ReSync():
     try:
         print("[",datetime.now(),"] ReSync:",len(friends),"friends currently")
         for x in friends:
-            logging.debug("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
+            logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
             p = friend_functions.process_friend.from_pid(x.principal_id)
             if x.is_complete == True:
                 p.lfcs = x.friend_code
@@ -165,7 +165,7 @@ def Handle_ReSync():
                 print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
                 FriendList.newlfcs.put(p)
             else:
-                logging.debug("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
+                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
     except Exception as e:
         print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
@@ -270,7 +270,7 @@ def sh_thread():
             ## Receives current relationship status for all friends, then iterates through them to set the lfcs status if not currently set
             if datetime.utcnow() >= RunSettings.WaitForResync:
                 time.sleep(Intervals.between_actions)
-                logging.debug("Resyncing friend list")
+                logging.info("Resyncing friend list")
                 Handle_ReSync()
                 RunSettings.WaitForResync = datetime.utcnow()+timedelta(seconds=Intervals.resync)
             time.sleep(Intervals.between_actions)
@@ -291,7 +291,7 @@ def sh_thread():
                 continue
             if datetime.utcnow() >= RunSettings.WaitForFriending:
                 time.sleep(Intervals.between_actions)
-                logging.debug("Getting new FCs")
+                logging.info("Getting new FCs")
                 print("[",datetime.now(),"] Quest: seeking new friends for the end of the world")
                 nlist = Web.getNewList()
                 for x in nlist:
@@ -299,7 +299,7 @@ def sh_thread():
                         FriendList.notadded.append(x)
                 RunSettings.WaitForFriending = datetime.utcnow()+timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
-                logging.debug("%s new FCs to process", len(FriendList.notadded))
+                logging.info("%s new FCs to process", len(FriendList.notadded))
                 print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
             time.sleep(Intervals.between_actions)
             HandleNewFriends()
