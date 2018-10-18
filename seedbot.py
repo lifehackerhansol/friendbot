@@ -147,19 +147,15 @@ def Handle_FriendTimeouts():
 
 def Handle_ReSync():
     global FriendList, NASCClient
-    friends = []
     try:
-        if len(FriendList.added) > 0:
-            friends = NASCClient.RefreshAllFriendData([x.pid for x in FriendList.added])
-    except Exception as e:
-        print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
-        logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
-        friends = []
-    try:
-        print("[",datetime.now(),"] ReSync:",len(friends),"friends currently")
-        for x in friends:
-            logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x.principal_id)))
-            p = friend_functions.process_friend.from_pid(x.principal_id)
+        print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
+        for p in FriendList:
+            if (datetime.utcnow()-timedelta(seconds=Intervals.resync) < p.resync_time)
+                continue
+            time.sleep(Intervals.betweenNintendoActions)
+            p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync)
+            logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
+            x = NASCClient.RefreshFriendData(p.pid)
             if x.is_complete == True:
                 p.lfcs = x.friend_code
                 logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
@@ -269,11 +265,9 @@ def sh_thread():
                 print (len(clist)," friends already claimed, queued for adding")
             FriendList.notadded.extend(clist)
             ## Receives current relationship status for all friends, then iterates through them to set the lfcs status if not currently set
-            if datetime.utcnow() >= RunSettings.WaitForResync:
-                time.sleep(Intervals.between_actions)
-                logging.info("Resyncing friend list")
-                Handle_ReSync()
-                RunSettings.WaitForResync = datetime.utcnow()+timedelta(seconds=Intervals.resync)
+            time.sleep(Intervals.between_actions)
+            logging.info("Resyncing friend list")
+            Handle_ReSync()
             time.sleep(Intervals.between_actions)
             ## iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_LFCSQueue():
