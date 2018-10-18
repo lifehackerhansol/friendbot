@@ -148,7 +148,7 @@ def Handle_FriendTimeouts():
 def Handle_ReSync():
     global FriendList, NASCClient
     try:
-        print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
+        #print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
         for p in FriendList.added:
             if datetime.utcnow()-timedelta(seconds=Intervals.resync) < p.resync_time:
                 continue
@@ -286,8 +286,8 @@ def sh_thread():
                 continue
             if datetime.utcnow() >= RunSettings.WaitForFriending:
                 time.sleep(Intervals.between_actions)
-                logging.info("Getting new FCs")
-                print("[",datetime.now(),"] Quest: seeking new friends for the end of the world")
+                logging.info("Getting New FCs. Currently %s added, %s lfcs",len(FriendList.added),len(FriendList.lfcs))
+                print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
                 nlist = Web.getNewList()
                 for x in nlist:
                     if Web.ClaimFC(x):
