@@ -149,7 +149,7 @@ def Handle_ReSync():
     global FriendList, NASCClient
     try:
         print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
-        for p in FriendList:
+        for p in FriendList.added:
             if datetime.utcnow()-timedelta(seconds=Intervals.resync) < p.resync_time:
                 continue
             time.sleep(Intervals.betweenNintendoActions)
