@@ -150,7 +150,7 @@ def Handle_ReSync():
     try:
         print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
         for p in FriendList:
-            if (datetime.utcnow()-timedelta(seconds=Intervals.resync) < p.resync_time)
+            if datetime.utcnow()-timedelta(seconds=Intervals.resync) < p.resync_time:
                 continue
             time.sleep(Intervals.betweenNintendoActions)
             p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync)
