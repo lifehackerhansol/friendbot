@@ -207,16 +207,18 @@ class NASCInteractor(object):
         return self.RemoveFriendPID(FC2PID(fc))
 
     def RefreshFriendData(self,pid):
-        if not self.PRUDUP_isConnected():
-            self._ConnectionError()
-            return None
-        else:
+        try:
+            x = self.client.sync_friend(self.lfcs, [pid], [])
             self._ConnectionSuccess()
-            return self.client.sync_friend(self.lfcs, [pid], [])[0]
+            if len(x) > 0:
+                return x[0]
+        except:
+            self._ConnectionError()
+        return None
     def RefreshAllFriendData(self,pids):
         try:
             self._ConnectionSuccess()
-            return self.client.sync_friend(self.lfcs, pids, [])[0]
+            x = self.client.sync_friend(self.lfcs, pids, [])
         except:
             self._ConnectionError()
             return []

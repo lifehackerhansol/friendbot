@@ -156,6 +156,8 @@ def Handle_ReSync():
             p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync)
             logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
             x = NASCClient.RefreshFriendData(p.pid)
+            if x is None:
+                continue
             if x.is_complete == True:
                 p.lfcs = x.friend_code
                 logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
