@@ -468,8 +468,13 @@ else:
     while RunSettings.Running==True:
         x=input("")
         x=x.lower()
-        if x=='q' or x=="quit":
+        if x=='q' or x=='quit':
             RunSettings.Running = False
+        if x=='a' or x=='active':
+            if RunSettings.active==1:
+                RunSettings.active=0
+            else:
+                RunSettings.active=1
 
 
 print("Application quit initiated, closing")
