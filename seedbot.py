@@ -31,7 +31,7 @@ class cSettings(object):
         self.lfcs=lfcs
         self.BotterCount=0
         self.ServerErrorCount=0
-        self.NintendoErrorCount=0
+        self.ReconnectNintendo=False
         self.StartTime = datetime.utcnow()
         self.RunTime = str(datetime.utcnow() - self.StartTime).split(".")[0]
         self.Running = True
@@ -173,6 +173,7 @@ def Handle_ReSync():
 
 def UnClaimAll():
     global Web, FriendList
+    Handle_LFCSQueue()
     for x in FriendList.added[:]:
         logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x.fc))
         print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
@@ -244,12 +245,18 @@ def sh_thread():
                 continue
             if not Web.IsConnected():
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.error_wait)
+                continue
             if NASCClient.Error() > 0:
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
                 UnClaimAll()
-                #RunSettings.active=0
-                #Web.SetActive(0)
+                RunSettings.ReconnectNintendo = True
+                print("Nintendo Connection Failed, waiting",Intervals.nintendo_wait,"seconds")
+                logging.error("Nintendo Connection Failed. Waiting %s seconds",Intervals.nintendo_wait)
+                continue
+            if RunSettings.ReconnectNintendo == True:
                 NASCClient.reconnect()
+                RunSettings.ReconnectNintendo = False
+
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
             ## unfriend anyone on my list that the website doesnt have for me
@@ -420,6 +427,8 @@ def presence_thread():
     global RunSettings
     while RunSettings.Running==True:
         time.sleep(30)
+        if datetime.utcnow() < RunSettings.PauseUntil:
+            continue
         update_presence()
 
 
@@ -428,6 +437,9 @@ def heartbeat_thread():
     global Web, NASCClient,RunSettings
     recwait = 0
     while RunSettings.Running==True:
+        time.sleep(30)
+        if datetime.utcnow() < RunSettings.PauseUntil:
+            continue
         Web.SetActive(RunSettings.active)
         toggle,run = Web.GetBotSettings()
         if toggle==True:
@@ -440,7 +452,6 @@ def heartbeat_thread():
             RunSettings.Running=run
         Web.getNewList()
         RunSettings.BotterCount=Web.BottersOnlineCount()
-        time.sleep(30)
 
 whb_thread_obj = threading.Thread(target=heartbeat_thread)
 whb_thread_obj.daemon = True
