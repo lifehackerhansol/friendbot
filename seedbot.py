@@ -97,8 +97,6 @@ class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
             FriendList.newlfcs.put(p)
             logging.info("LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
             print("[",datetime.now(),"] LFCS received for",friend_functions.FormattedFriendCode(p.fc))
-            #FriendList.added = [x for x in FriendList.added if x.pid != event.pid]
-            #FriendList.notadded = [x for x in FriendList.notadded if x.pid != event.pid]
 ## Handle_LFCSQueue()
 ## iterate through lfcs queue and attempt to upload the data to the server
 def Handle_LFCSQueue():
@@ -185,11 +183,11 @@ def UnClaimAll():
     for x in FriendList.notadded[:]:
         logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x.fc))
         print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
-        if Web.ResetFC(x.fc)==True:
+        if Web.ResetFC(x)==True:
             logging.info("Successfully unclaimed %s",friend_functions.FormattedFriendCode(x.fc))
             print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
             FriendList.notadded.remove(x)
-            FriendList.remove.append(x.pid)
+            FriendList.remove.append(friend_functions.FC2PID(x))
 
 def Handle_RemoveQueue():
     global NASCClient, FriendList
@@ -265,7 +263,7 @@ def sh_thread():
             FriendList.added = [x for x in FriendList.added if x.fc in clist]
             ## compare the claimed list with the current friends lists and add new friends to notadded
             addedfcs = [x.fc for x in FriendList.added]
-            addedfcs.extend([x.fc for x in FriendList.notadded])
+            addedfcs.extend([x for x in FriendList.notadded])
             addedfcs.extend([x.fc for x in FriendList.lfcs])
             addedfcs.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
             clist = [x for x in clist if not x in addedfcs and len(x)==12]
