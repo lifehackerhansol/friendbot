@@ -181,11 +181,11 @@ def UnClaimAll():
             FriendList.added.remove(x)
             FriendList.remove.append(x.pid)
     for x in FriendList.notadded[:]:
-        logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x.fc))
-        print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x.fc))
+        logging.info("Attempting to unclaim: %s",friend_functions.FormattedFriendCode(x))
+        print ("Attempting to unclaim",friend_functions.FormattedFriendCode(x))
         if Web.ResetFC(x)==True:
-            logging.info("Successfully unclaimed %s",friend_functions.FormattedFriendCode(x.fc))
-            print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x.fc))
+            logging.info("Successfully unclaimed %s",friend_functions.FormattedFriendCode(x))
+            print ("Successfully unclaimed",friend_functions.FormattedFriendCode(x))
             FriendList.notadded.remove(x)
             FriendList.remove.append(friend_functions.FC2PID(x))
 
