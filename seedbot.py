@@ -155,6 +155,7 @@ def Handle_ReSync():
             logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
             x = NASCClient.RefreshFriendData(p.pid)
             if x is None:
+                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
                 continue
             if x.is_complete == True:
                 p.lfcs = x.friend_code
