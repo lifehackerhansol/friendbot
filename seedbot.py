@@ -259,7 +259,10 @@ def sh_thread():
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
             ## unfriend anyone on my list that the website doesnt have for me
-            FriendList.remove.extend([x.pid for x in FriendList.added if x.fc not in clist])
+            toremove=[x.pid for x in FriendList.added if x.fc not in clist]
+            for x in toremove:
+                logging.warning("%s not in claimed list",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)))
+            FriendList.remove.extend(toremove)
             ## remove the "others" from the added friends list
             FriendList.added = [x for x in FriendList.added if x.fc in clist]
             ## compare the claimed list with the current friends lists and add new friends to notadded
