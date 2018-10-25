@@ -245,6 +245,9 @@ def sh_thread():
             if not Web.IsConnected():
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.error_wait)
                 continue
+            if RunSettings.ReconnectNintendo == True:
+                NASCClient.reconnect()
+                RunSettings.ReconnectNintendo = False
             if NASCClient.Error() > 0:
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
                 UnClaimAll()
@@ -252,9 +255,6 @@ def sh_thread():
                 print("Nintendo Connection Failed, waiting",Intervals.nintendo_wait,"seconds")
                 logging.error("Nintendo Connection Failed. Waiting %s seconds",Intervals.nintendo_wait)
                 continue
-            if RunSettings.ReconnectNintendo == True:
-                NASCClient.reconnect()
-                RunSettings.ReconnectNintendo = False
 
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
@@ -301,7 +301,9 @@ def sh_thread():
                 print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
                 nlist = Web.getNewList()
                 for x in nlist:
-                    if Web.ClaimFC(x):
+                    if Web.ClaimFC(x) == True:
+                        logging.info("Claimed %s",friend_functions.FormattedFriendCode(x))
+                        print("[",datetime.now(),"] Claimed",friend_functions.FormattedFriendCode(x))
                         FriendList.notadded.append(x)
                 RunSettings.WaitForFriending = datetime.utcnow()+timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
