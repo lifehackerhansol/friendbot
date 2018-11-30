@@ -8,7 +8,6 @@ import threading
 import queue
 import yaml
 import urllib3
-import npyscreen
 from const import Const
 import webhandler
 import friend_functions
@@ -244,6 +243,8 @@ def sh_thread():
                 continue
             if not Web.IsConnected():
                 RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.error_wait)
+                print("Web Server Connection Failed, waiting",Intervals.error_wait,"seconds")
+                logging.error("Web Server Connection Failed. Waiting %s seconds",Intervals.error_wait)
                 continue
             if RunSettings.ReconnectNintendo == True:
                 NASCClient.reconnect()
@@ -317,86 +318,6 @@ def sh_thread():
         except Exception as e:
             print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
             logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
-class ExitButton(npyscreen.ButtonPress):
-    def whenPressed(self):
-        self.parent.parentApp.switchForm(None)
-
-class GetFriendsCheckBox(npyscreen.Checkbox):
-    def whenToggled(self):
-        global RunSettings, Web
-        if self.value==True:
-            a=1
-        else:
-            a=0
-        RunSettings.active=a
-        Web.SetActive(a)
-
-class P1BotForm(npyscreen.FormBaseNew): 
-    def while_waiting(self): 
-        global FriendList, RunSettings, NASCClient
-        #npyscreen.notify_wait("Update") 
-        RunSettings.UpdateRunTime()
-        self.lblRuntime.value = RunSettings.RunTime
-        self.lblBotCount.value = str(RunSettings.BotterCount)
-        self.lblMyFriendCode.value = friend_functions.FormattedFriendCode(RunSettings.friendcode)
-        if RunSettings.active == 1:
-            self.lblActive.value="True"
-        else:
-            self.lblActive.value = "False"
-        flist = [friend_functions.FormattedFriendCode(x.fc) for x in FriendList.added]
-        self.addedfriendslist.footer = "("+str(len(FriendList.added))+")"
-        self.addedfriendslist.values = flist
-        flist = [friend_functions.FormattedFriendCode(x.fc) for x in FriendList.lfcs]
-        self.lfcslist.footer="("+str(len(FriendList.lfcs))+")"
-        self.lfcslist.values = flist
-        self.unfriendlist.footer="("+str(len(FriendList.remove))+")"
-        flist = [friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)) for x in FriendList.remove]
-        self.unfriendlist.values = flist
-        connected=NASCClient.IsConnected()
-        if connected:
-            self.lblConnected.value="Connected"
-        else:
-            self.lblConnected.value="Disconnected"
-        self.getFriendsCB.value=RunSettings.active == 1
-        self.display() 
-    def create(self): 
-        #self.date_widget = self.add(npyscreen.FixedText, value=datetime.now(), editable=False) 
-        self.lblConnected  = self.add(npyscreen.TitleText, name = "Friend Service:",value=str(False),editable=False, use_two_lines=False,begin_entry_at=20 )
-        self.nextrely -= 1
-        self.nextrelx += 40
-        self.lblBotCount  = self.add(npyscreen.TitleText, name = "BotCount:",value="0",editable=False, use_two_lines=False,begin_entry_at=20 )
-        self.nextrely += 1
-        self.nextrelx -= 40
-        self.lblMyFriendCode  = self.add(npyscreen.TitleText, name = "My Friend Code:",value="",editable=False, use_two_lines=False,begin_entry_at=20 )
-        self.nextrely -= 1
-        self.nextrelx += 40
-        self.lblActive  = self.add(npyscreen.TitleText, name = "Active:",value="True",editable=False, use_two_lines=False,begin_entry_at=20 )
-        self.nextrelx -= 40
-        self.nextrely += 1
-        self.lblRuntime = self.add(npyscreen.TitleText, name = "Run Time:", value="0", editable=False,use_two_lines=False,begin_entry_at=20)
-        self.nextrely += 1
-        self.addedfriendslist = self.add(npyscreen.BoxTitle, name = "Friends", editable=False,height=15,width=25)
-        self.nextrely -= 15
-        self.nextrelx += 26
-        self.lfcslist = self.add(npyscreen.BoxTitle, name = "LFCS Upload", editable=False,height=15,width=25)
-        self.nextrely -= 15
-        self.nextrelx += 26
-        self.unfriendlist = self.add(npyscreen.BoxTitle, name = "Unfriend", editable=False,height=15,width=25)
-        self.nextrely += 1
-        self.nextrelx -= 52
-        self.getFriendsCB = self.add(GetFriendsCheckBox, name="Get Friends", value=True)
-        self.nextrely += 1
-        self.nextrely += 1
-        self.nextrely += 1
-        self.exitButton = self.add(ExitButton, name="Exit")
-        #self.how_exited_handers[npyscreen.wgwidget.EXITED_ESCAPE] = self.exit_application
-
-class Part1Bot(npyscreen.NPSAppManaged):
-    keypress_timeout_default = 10
-    def onStart(self):
-        P1Form = self.addForm("MAIN", P1BotForm, name="Part1Bot") 
-    
-
 
 print("Running system as",RunSettings.friendcode)
 
@@ -442,8 +363,6 @@ def heartbeat_thread():
     recwait = 0
     while RunSettings.Running==True:
         time.sleep(30)
-        if datetime.utcnow() < RunSettings.PauseUntil:
-            continue
         Web.SetActive(RunSettings.active)
         toggle,run = Web.GetBotSettings()
         if toggle==True:
@@ -472,13 +391,15 @@ else:
     while RunSettings.Running==True:
         x=input("")
         x=x.lower()
-        if x=='q' or x=='quit':
+        if 'q' in x:
             RunSettings.Running = False
-        if x=='a' or x=='active':
+            continue
+        if 'a' in x:
             if RunSettings.active==1:
                 RunSettings.active=0
             else:
                 RunSettings.active=1
+            continue
 
 
 print("Application quit initiated, closing")
