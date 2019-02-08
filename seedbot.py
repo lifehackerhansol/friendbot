@@ -95,8 +95,8 @@ class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
         if event.type == nintendo_notification.NotificationType.FRIEND_REQUEST_COMPLETE:
             p = friend_functions.process_friend.from_pid(event.pid)
             FriendList.newlfcs.put(p)
-            logging.info("LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
-            print("[",datetime.now(),"] LFCS received for",friend_functions.FormattedFriendCode(p.fc))
+            logging.info("Notification: LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
+            print("[",datetime.now(),"] Notification: LFCS received for",friend_functions.FormattedFriendCode(p.fc))
 ## Handle_LFCSQueue()
 ## iterate through lfcs queue and attempt to upload the data to the server
 def Handle_LFCSQueue():
