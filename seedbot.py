@@ -155,18 +155,18 @@ def Handle_ReSync():
             if p.added == False:
                 p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untilremove)
                 logging.info("ReSync: Checking friend for completion, Adding friend back: %s",friend_functions.FormattedFriendCode(p.fc))
-                print("[",datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(fc))
+                print("[",datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(p.fc))
                 rel = NASCClient.AddFriendPID(p.pid)
                 p.added = True
                 if not rel is None:
                     if rel.is_complete==True:
-                        logging.warning("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(fc))
-                        print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(fc))
+                        logging.warning("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+                        print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(p.fc))
                         p.lfcs = rel.friend_code
                         FriendList.newlfcs.put(p)
             else:
                 logging.info("ReSync: Checking friend for completion, Removing friend: %s",friend_functions.FormattedFriendCode(p.fc))
-                print("[",datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(fc))
+                print("[",datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(p.fc))
                 rel = NASCClient.RemoveFriendPID(p.pid)
                 p.added = False
                 p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untiladd)
