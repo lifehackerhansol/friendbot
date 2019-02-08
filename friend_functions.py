@@ -30,6 +30,7 @@ class process_friend:
         self.added_time = datetime.utcnow()
         self.resync_time = datetime.utcnow()+timedelta(seconds=resync_interval)
         self.lfcs = None
+        self.added = True
     @classmethod
     def from_pid(cls, pid, resync_interval=90):
         return cls(PID2FC(pid),resync_interval)
