@@ -407,26 +407,10 @@ p_thread_obj = threading.Thread(target=presence_thread)
 p_thread_obj.daemon = True
 p_thread_obj.start()
 
-if RunSettings.UI==True:
-    App = Part1Bot().run()
-    RunSettings.Running=False
-else:
-    while RunSettings.Running==True:
-        x=input("")
-        x=x.lower()
-        if 'q' in x:
-            RunSettings.Running = False
-            continue
-        if 'a' in x:
-            if RunSettings.active==1:
-                RunSettings.active=0
-            else:
-                RunSettings.active=1
-            continue
+sh_thread_obj.join()
 
 
 print("Application quit initiated, closing")
-sh_thread_obj.join()
 print("Removing friends")
 #print("added friends list,",len(added_friends))
 #print("lfcs list,",len(lfcs_queue))
