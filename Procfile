@@ -1,1 +1,1 @@
-worker: seedbot.py
+web: python3 seedbot.py
