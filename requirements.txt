@@ -2,4 +2,4 @@ urllib3
 pyyaml
 requests
 beautifulsoup4
--e https://github.com/Stary2001/NintendoClients.git
+-e git+https://github.com/Stary2001/NintendoClients.git
