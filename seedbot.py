@@ -20,6 +20,7 @@ from nintendo.nex import nintendo_notification
 logname = "error_" + datetime.now().strftime('%Y%m%d_%H%M%S') + ".log"
 #logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname,filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
+logging.info("Starting App");
 class cSettings(object):
     def __init__(self,pid,lfcs):
         self.UI = False
