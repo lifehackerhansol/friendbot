@@ -152,38 +152,38 @@ def Handle_ReSync():
             if datetime.utcnow() < p.resync_time:
                 continue
             time.sleep(Intervals.betweenNintendoActions)
-#            logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
-            if p.added == False:
-                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untilremove)
-                logging.info("ReSync: Checking friend for completion, Adding friend back: %s",friend_functions.FormattedFriendCode(p.fc))
-                print("[",datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(p.fc))
-                rel = NASCClient.AddFriendPID(p.pid)
-                p.added = True
-                if not rel is None:
-                    if rel.is_complete==True:
-                        logging.warning("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
-                        print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(p.fc))
-                        p.lfcs = rel.friend_code
-                        FriendList.newlfcs.put(p)
-            else:
-                logging.info("ReSync: Checking friend for completion, Removing friend: %s",friend_functions.FormattedFriendCode(p.fc))
-                print("[",datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(p.fc))
-                rel = NASCClient.RemoveFriendPID(p.pid)
-                p.added = False
-                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untiladd)
-        
-            #x = NASCClient.RefreshFriendData(p.pid)
-
-#            if x is None:
-#                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
-#                continue
-#            if x.is_complete == True:
-#                p.lfcs = x.friend_code
-#                logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
-#                print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
-#                FriendList.newlfcs.put(p)
+            logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
+#            if p.added == False:
+#                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untilremove)
+#                logging.info("ReSync: Checking friend for completion, Adding friend back: %s",friend_functions.FormattedFriendCode(p.fc))
+#               print("[",datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(p.fc))
+#                rel = NASCClient.AddFriendPID(p.pid)
+#                p.added = True
+#                if not rel is None:
+#                    if rel.is_complete==True:
+#                        logging.warning("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+#                        print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(p.fc))
+#                       p.lfcs = rel.friend_code
+#                        FriendList.newlfcs.put(p)
 #            else:
-#                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
+#                logging.info("ReSync: Checking friend for completion, Removing friend: %s",friend_functions.FormattedFriendCode(p.fc))
+#                print("[",datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(p.fc))
+#                rel = NASCClient.RemoveFriendPID(p.pid)
+#                p.added = False
+#                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untiladd)
+        
+            x = NASCClient.RefreshFriendData(p.pid)
+
+            if x is None:
+                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
+                continue
+            if x.is_complete == True:
+                p.lfcs = x.friend_code
+                logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
+                print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
+                FriendList.newlfcs.put(p)
+            else:
+                logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
     except Exception as e:
         print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
@@ -271,7 +271,7 @@ def sh_thread():
                 NASCClient.reconnect()
                 RunSettings.ReconnectNintendo = False
             if NASCClient.Error() > 0:
-                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
+#                RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
                 UnClaimAll()
 #                RunSettings.ReconnectNintendo = True
                 print("Nintendo Connection Failed, Exiting.")
