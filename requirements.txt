@@ -1,4 +1,4 @@
 urllib3
-yaml
+pyyaml
 requests
 beautifulsoup4
