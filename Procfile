@@ -1,1 +1,1 @@
-web: python3 seedbot.py
+web: seedbot.py
