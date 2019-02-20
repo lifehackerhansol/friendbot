@@ -288,6 +288,7 @@ def sh_thread():
             ## unfriend anyone on my list that the website doesnt have for me
             toremove=[x.pid for x in FriendList.added if x.fc not in clist]
             for x in toremove:
+                print("[",datetime.now(),"] ", friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)), " not in claimed list");
                 logging.warning("%s not in claimed list",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)))
             FriendList.remove.extend(toremove)
             ## remove the "others" from the added friends list
