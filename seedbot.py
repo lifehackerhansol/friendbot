@@ -240,7 +240,7 @@ def HandleNewFriends():
         if len([x for x in curFriends if x == fc]) > 0:
             continue
         logging.info("Adding friend %s",friend_functions.FormattedFriendCode(fc))
-        print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
+        #print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
         time.sleep(Intervals.betweenNintendoActions)
         #TODO error check this vvv
         rel = NASCClient.AddFriendFC(fc)
@@ -335,7 +335,7 @@ def sh_thread():
                 RunSettings.WaitForFriending = datetime.utcnow()+timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
                 logging.info("%s new FCs to process", len(FriendList.notadded))
-                print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
+                #print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
             time.sleep(Intervals.between_actions)
             HandleNewFriends()
 
