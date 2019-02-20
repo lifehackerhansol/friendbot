@@ -98,7 +98,7 @@ class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
             p = friend_functions.process_friend.from_pid(event.pid)
             FriendList.newlfcs.put(p)
             logging.info("Notification: LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
-            print("[",datetime.now(),"] Notification: LFCS received for",friend_functions.FormattedFriendCode(p.fc))
+            print("Notification: LFCS received for",friend_functions.FormattedFriendCode(p.fc))
 ## Handle_LFCSQueue()
 ## iterate through lfcs queue and attempt to upload the data to the server
 def Handle_LFCSQueue():
@@ -111,7 +111,7 @@ def Handle_LFCSQueue():
         FriendList.lfcs.append(p)
         FriendList.added = [x for x in FriendList.added if x.pid != p.pid]
         logging.info("LFCS processed for %s",friend_functions.FormattedFriendCode(p.fc))
-        print("[",datetime.now(),"] LFCS processed for",friend_functions.FormattedFriendCode(p.fc))
+        print("LFCS processed for",friend_functions.FormattedFriendCode(p.fc))
     for x in FriendList.lfcs[:]:
         p = x
         FriendList.lfcs.remove(x)
@@ -123,12 +123,12 @@ def Handle_LFCSQueue():
             p.lfcs=rel.friend_code
         if Web.UpdateLFCS(p.fc,p.lfcs) == False:
             logging.warning("LFCS failed to upload for %s",friend_functions.FormattedFriendCode(p.fc))
-            print("[",datetime.now(),"] LFCS failed to uploaded for fc",friend_functions.FormattedFriendCode(p.fc))
+            print("LFCS failed to uploaded for fc",friend_functions.FormattedFriendCode(p.fc))
             FriendList.lfcs.append(p)
             continue
         else:
             logging.info("LFCS uploaded successfully for %s",friend_functions.FormattedFriendCode(p.fc))
-            print("[",datetime.now(),"] LFCS uploaded successfully for fc",friend_functions.FormattedFriendCode(p.fc))
+            print("LFCS uploaded successfully for fc",friend_functions.FormattedFriendCode(p.fc))
             FriendList.remove.append(p.pid)
     return True
 
@@ -138,7 +138,7 @@ def Handle_FriendTimeouts():
     FriendList.added = [x for x in FriendList.added if (datetime.utcnow()-timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
     for x in oldfriends:
         logging.warning("Friend Code Timeout: %s",friend_functions.FormattedFriendCode(x.fc))
-        print("[",datetime.now(),"] Friend code timeout:",friend_functions.FormattedFriendCode(x.fc))
+        print("Friend code timeout:",friend_functions.FormattedFriendCode(x.fc))
         if Web.TimeoutFC(x.fc):
             FriendList.remove.append(x.pid)
         else:
@@ -151,7 +151,7 @@ def Handle_ReSync():
         for p in FriendList.added:
             if datetime.utcnow() < p.resync_time:
                 continue
-            print("[",datetime.now(),"] ReSync:",friend_functions.FormattedFriendCode(p.fc)," | ",len(FriendList.added),"friends currently")
+            print("ReSync:",friend_functions.FormattedFriendCode(p.fc)," | ",len(FriendList.added),"friends currently")
             time.sleep(Intervals.betweenNintendoActions)
             logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
             p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync)
@@ -182,12 +182,12 @@ def Handle_ReSync():
             if x.is_complete == True:
                 p.lfcs = x.friend_code
                 logging.info("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
-                print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
+                print("ReSync: Friend was completed, adding to lfcs queue:",friend_functions.FormattedFriendCode(p.fc))
                 FriendList.newlfcs.put(p)
             else:
                 logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
     except Exception as e:
-        print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+        print("Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
         return False
     return True
@@ -247,7 +247,7 @@ def HandleNewFriends():
         if not rel is None:
             if rel.is_complete==True:
                 logging.warning("NewFriends: Friend %s already completed, moving to LFCS list",friend_functions.FormattedFriendCode(fc))
-                print("[",datetime.now(),"] NewFriends: Friend",friend_functions.FormattedFriendCode(fc),"already completed, moving to LFCS list")
+                print("NewFriends: Friend",friend_functions.FormattedFriendCode(fc),"already completed, moving to LFCS list")
                 p = friend_functions.process_friend(fc)
                 p.lfcs = rel.friend_code
                 FriendList.lfcs.append(p)
@@ -288,7 +288,7 @@ def sh_thread():
             ## unfriend anyone on my list that the website doesnt have for me
             toremove=[x.pid for x in FriendList.added if x.fc not in clist]
             for x in toremove:
-                print("[",datetime.now(),"] ", friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)), " not in claimed list");
+                print("", friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)), " not in claimed list");
                 logging.warning("%s not in claimed list",friend_functions.FormattedFriendCode(friend_functions.PID2FC(x)))
             FriendList.remove.extend(toremove)
             ## remove the "others" from the added friends list
@@ -311,17 +311,17 @@ def sh_thread():
             ## iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_LFCSQueue():
                 logging.error("Could not completed LFCS queue processing")
-                print("[",datetime.now(),"] could not complete LFCS queue processing")
+                print("could not complete LFCS queue processing")
             time.sleep(Intervals.between_actions)
             ## true if it makes it through the list, false otherwise
             if not Handle_FriendTimeouts():
                 logging.error("Could not completed friend timeout processing")
-                print("[",datetime.now(),"] could not Timeout old friends")
+                print("could not Timeout old friends")
             time.sleep(Intervals.between_actions)
             ## iterates through removal queue, uploads lfcs to website. returns false if the process fails somewhere
             if not Handle_RemoveQueue():
                 logging.error("Could not completed Remove queue processing")
-                print("[",datetime.now(),"] Could not handle RemoveQueue")
+                print("Could not handle RemoveQueue")
                 continue
             if datetime.utcnow() >= RunSettings.WaitForFriending:
                 time.sleep(Intervals.between_actions)
@@ -331,7 +331,7 @@ def sh_thread():
                 for x in nlist:
                     if Web.ClaimFC(x) == True:
                         logging.info("Claimed %s",friend_functions.FormattedFriendCode(x))
-                        print("[",datetime.now(),"] Claimed",friend_functions.FormattedFriendCode(x))
+                        print("Claimed",friend_functions.FormattedFriendCode(x))
                         FriendList.notadded.append(x)
                 RunSettings.WaitForFriending = datetime.utcnow()+timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
@@ -343,7 +343,7 @@ def sh_thread():
 
     
         except Exception as e:
-            print("[",datetime.now(),"] Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
+            print("Got exception!!", e,"\n",sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
             logging.error("Exception found: %s\n%s\n%s\n%s",e,sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
 
 print("Running system as",RunSettings.friendcode)
