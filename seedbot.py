@@ -55,6 +55,7 @@ class Intervals(Const):
     change_game = 700
     between_actions = 0.2
     betweenNintendoActions = 0.5
+    resync = 45
 identity_path = "identity.yaml"
 if len(sys.argv) >= 2:
     identity_path = sys.argv[1]
@@ -147,12 +148,13 @@ def Handle_FriendTimeouts():
 def Handle_ReSync():
     global FriendList, NASCClient
     try:
-        #print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
         for p in FriendList.added:
             if datetime.utcnow() < p.resync_time:
                 continue
+            print("[",datetime.now(),"] ReSync:",len(FriendList.added),"friends currently")
             time.sleep(Intervals.betweenNintendoActions)
             logging.info("ReSync: Checking friend for completion, refreshing: %s",friend_functions.FormattedFriendCode(p.fc))
+            p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync)
 #            if p.added == False:
 #                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untilremove)
 #                logging.info("ReSync: Checking friend for completion, Adding friend back: %s",friend_functions.FormattedFriendCode(p.fc))
@@ -323,7 +325,7 @@ def sh_thread():
             if datetime.utcnow() >= RunSettings.WaitForFriending:
                 time.sleep(Intervals.between_actions)
                 logging.info("Getting New FCs. Currently %s added, %s lfcs",len(FriendList.added),len(FriendList.lfcs))
-                print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
+                #print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
                 nlist = Web.getNewList()
                 for x in nlist:
                     if Web.ClaimFC(x) == True:
