@@ -10,7 +10,8 @@ class WebsiteHandler():
         self.active = active
         self.ver = ver
         self.ErrorCount = 0
-
+        self.TotalErrors = 0
+        
     def IsConnected(self):
         return self.ErrorCount == 0
 
@@ -18,6 +19,7 @@ class WebsiteHandler():
         self.active = active
     def _ServerError(self):
         self.ErrorCount += 1
+        self.TotalErrors += 1
     def _ServerSuccess(self):
         self.ErrorCount=0
 
