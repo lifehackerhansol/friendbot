@@ -282,7 +282,11 @@ def sh_thread():
 #                logging.error("Nintendo Connection Failed. Waiting %s seconds",Intervals.nintendo_wait)
                 RunSettings.Running = False
                 continue
-
+            if Web.TotalErrors > 30:
+                UnClaimAll()
+                print("Server Errors exceeded threshold. Exiting")
+                RunSettings.Running = False
+                continue
             clist = Web.getClaimedList()
             ## if the site doesnt have a fc as claimed, i shouldnt either
             ## unfriend anyone on my list that the website doesnt have for me
