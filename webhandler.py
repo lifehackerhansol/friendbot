@@ -125,44 +125,6 @@ class WebsiteHandler():
             self._ServerError()
         return False
     def GetBotSettings(self):
-        try:
-            run=True
-            toggle=False
-            settings_req = requests.get(self.url+"/botSettings.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver})
-            if settings_req.status_code == 200:
-                self._ServerSuccess()
-                if not settings_req.text.startswith('error'):
-                    for x in settings_req.text.split("\n"):
-                        if x.startswith("toggleactive="):
-                            if x.endswith("1"):
-                                logging.debug("ToggleActive = %s",1)
-                                toggle=True
-                            else:
-                                logging.debug("ToggleActive = %s",0)
-                                toggle=False
-                        if x.startswith("run="):
-                            if x.endswith("0"):
-                                logging.debug("Run = %s",0)
-                                run=False
-                            else:
-                                logging.debug("Run = %s",1)
-                                run=True
-            else:    
-                logging.warning("Server responded with HTTP code %s",settings_req.status_code)
-                print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
-                self._ServerError()
-        except:
-            self._ServerError()
-        return toggle,run
+        return False,True
     def ResetBotSettings(self):
-        try:
-            settings_req = requests.get(self.url+"/botSettings.php", params={'me': self.myFC, 'active': self.active, 'ver': self.ver, 'run': '1', 'toggle':'0'})
-            if settings_req.status_code == 200:
-                self._ServerSuccess()
-            else:    
-                logging.warning("Server responded with HTTP code %s",settings_req.status_code)
-                print("[",datetime.now(),"] WebHandler: Generic Connection error",settings_req.status_code)
-                self._ServerError()
-        except:
-            self._ServerError()
         return True
