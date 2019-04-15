@@ -68,7 +68,7 @@ RunSettings = cSettings(identity['user_id'],identity['lfcs'])
 FriendList = friend_functions.FLists()
 NASCClient = friend_functions.NASCInteractor(identity)
 
-weburl = "http://www.mechanicaldragon.xyz/part1dumper"
+weburl = "http://part1dumper.mechanicaldragon.xyz"
 
 random_games =  [
     # Skylanders games
