@@ -83,11 +83,11 @@ class NASCInteractor(object):
             'sdkver': b'000000',
             'titleid': b'0004013000003202',
             'gamecd': b'----',
-            'gamever': b'0011',
+            'gamever': b'0012',
             'mediatype': b'0',
             'makercd': b'00',
             'servertype': b'L1',
-            'fpdver': b'000C',
+            'fpdver': b'000D',
             'unitcd': b'2', # ?
             'macadr': identity['mac_address'].encode('ascii'), # 3DS' wifi MAC
             'bssid': identity['bssid'].encode('ascii'), # current AP's wifi MAC
