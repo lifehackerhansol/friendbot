@@ -1,3 +1,8 @@
-identity_*.yaml
-ctcert_*.bin
+*.yaml
+*.bin
+*.log
+*.pem
 friendbot.zip
+__pycache__
+nasc_response.txt
+src

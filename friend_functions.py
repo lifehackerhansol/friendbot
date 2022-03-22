@@ -115,9 +115,9 @@ class NASCInteractor(object):
         self.connected=False
     def getNASCBits(self):
         print(f"Getting a NASC token for {self.blob['csnum'].decode('ascii')}..")
-        resp = requests.post("https://nasc.nintendowifi.net/ac", headers={'User-Agent': 'CTR FPD/000B', 'X-GameID': '00003200'}, data=self.blob_enc, cert='ClCertA.pem', verify=False)
-        print (resp.text)
-        bits = dict(map(lambda a: a.split("="), resp.text.split("&")))
+        with open("nasc_response.txt") as f:
+            resp = f.read()
+        bits = dict(map(lambda a: a.split("="), resp.split("&")))
         self.token = bits['token']
         bits_dec = {}
         for k in bits:

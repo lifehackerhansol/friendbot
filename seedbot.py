@@ -59,7 +59,7 @@ class Intervals(Const):
 identity_path = "identity.yaml"
 if len(sys.argv) >= 2:
     identity_path = sys.argv[1]
-identity = yaml.load(open(identity_path, 'r'))
+identity = yaml.safe_load(open(identity_path, 'r'))
 
 
 ###################################### VARIABLES AND SHIT
@@ -68,7 +68,7 @@ RunSettings = cSettings(identity['user_id'],identity['lfcs'])
 FriendList = friend_functions.FLists()
 NASCClient = friend_functions.NASCInteractor(identity)
 
-weburl = "http://part1dumper.mechanicaldragon.xyz"
+weburl = "http://part1dumper.nintendohomebrew.com"
 
 random_games =  [
     # Skylanders games
