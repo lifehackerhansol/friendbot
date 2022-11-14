@@ -16,7 +16,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from datetime import datetime, timedelta
 
 sys.path.append("./NintendoClients")
-from nintendo.nex import nintendo_notification
+from nintendo.nex import nintendonotification
 logname = "error_" + datetime.now().strftime('%Y%m%d_%H%M%S') + ".log"
 #logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname,filemode='w',format='%(asctime)s %(message)s',level=logging.INFO)
@@ -78,30 +78,30 @@ random_games =  [
 ]
 
 
-def update_presence():
+async def update_presence():
     global RunSettings
     global random_games
     global NASCClient
     if datetime.utcnow() - RunSettings.LastGameChange > timedelta(seconds=Intervals.change_game):
         RunSettings.LastGameChange = datetime.utcnow()
         RunSettings.CurrentGame = random.choice(random_games)
-    NASCClient.UpdatePresence(RunSettings.CurrentGame,'Domo Arigato')
+    await NASCClient.UpdatePresence(RunSettings.CurrentGame,'Domo Arigato')
 
 
-class NotificationHandler(nintendo_notification.NintendoNotificationHandler):
+class NotificationHandler(nintendonotification.NintendoNotificationServer):
     def __init__(self):
         self.name_cache = {}
 
     def process_notification_event(self, event):
         global FriendList
-        if event.type == nintendo_notification.NotificationType.FRIEND_REQUEST_COMPLETE:
+        if event.type == 7:  # FRIEND_REQUEST_COMPLETE
             p = friend_functions.process_friend.from_pid(event.pid)
             FriendList.newlfcs.put(p)
             logging.info("Notification: LFCS received for %s",friend_functions.FormattedFriendCode(p.fc))
             print("Notification: LFCS received for",friend_functions.FormattedFriendCode(p.fc))
 ## Handle_LFCSQueue()
 ## iterate through lfcs queue and attempt to upload the data to the server
-def Handle_LFCSQueue():
+async def Handle_LFCSQueue():
     global NASCClient, FriendList, Web
     while not FriendList.newlfcs.empty():
         p = FriendList.newlfcs.get()
@@ -116,7 +116,7 @@ def Handle_LFCSQueue():
         p = x
         FriendList.lfcs.remove(x)
         if p.lfcs is None:
-            rel = NASCClient.RefreshFriendData(p.pid)
+            rel = await NASCClient.RefreshFriendData(p.pid)
             if rel is None:
                 FriendList.lfcs.append(p)
                 continue
@@ -145,7 +145,7 @@ def Handle_FriendTimeouts():
             return False
     return True
 
-def Handle_ReSync():
+async def Handle_ReSync():
     global FriendList, NASCClient
     try:
         for p in FriendList.added:
@@ -174,7 +174,7 @@ def Handle_ReSync():
 #                p.added = False
 #                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untiladd)
         
-            x = NASCClient.RefreshFriendData(p.pid)
+            x = await NASCClient.RefreshFriendData(p.pid)
 
             if x is None:
                 logging.info("ReSync: Friend wasnt complete yet or is not in added friendlist: %s",friend_functions.FormattedFriendCode(p.fc))
@@ -212,17 +212,17 @@ def UnClaimAll():
             FriendList.notadded.remove(x)
             FriendList.remove.append(friend_functions.FC2PID(x))
 
-def Handle_RemoveQueue():
+async def Handle_RemoveQueue():
     global NASCClient, FriendList
     for x in FriendList.remove[:]:
         time.sleep(Intervals.betweenNintendoActions)
         #pid = x
-        resp = NASCClient.RemoveFriendPID(x)
+        resp = await NASCClient.RemoveFriendPID(x)
         if resp==True:
             FriendList.remove.remove(x)
     return True
 
-def HandleNewFriends():
+async def HandleNewFriends():
     global FriendList, NASCClient
     FriendList.notadded = list(set(FriendList.notadded)) ## remove duplicates
     for fc in FriendList.notadded[:]:
@@ -243,7 +243,7 @@ def HandleNewFriends():
         #print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
         time.sleep(Intervals.betweenNintendoActions)
         #TODO error check this vvv
-        rel = NASCClient.AddFriendFC(fc)
+        rel = await NASCClient.AddFriendFC(fc)
         if not rel is None:
             if rel.is_complete==True:
                 logging.warning("NewFriends: Friend %s already completed, moving to LFCS list",friend_functions.FormattedFriendCode(fc))

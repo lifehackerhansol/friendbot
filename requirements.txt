@@ -2,4 +2,4 @@ urllib3
 pyyaml
 requests
 beautifulsoup4
--e git+https://github.com/lifehackerhansol/NintendoClients.git#egg=nintendo
+nintendoclients~=1.0.0
