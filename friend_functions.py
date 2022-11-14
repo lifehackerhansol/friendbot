@@ -1,20 +1,19 @@
-import sys
-import hashlib
 import base64
-import struct
-import requests
-import urllib3
-import time
+import hashlib
 import logging
-from datetime import datetime, timedelta
-import threading
 import queue
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import struct
+import time
+from datetime import datetime, timedelta
+
+import urllib3
+from nintendo import games
+from nintendo.nex import backend, friends, settings
 
 from const import Const
 
-from nintendo import games
-from nintendo.nex import authentication, backend, friends, secure, settings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 class NINTENDO_SERVER_ERROR(Const):
     SUCCESS = 0
@@ -27,12 +26,14 @@ class process_friend:
         self.fc = fc
         self.pid = int(fc) & 0xffffffff
         self.added_time = datetime.utcnow()
-        self.resync_time = datetime.utcnow()+timedelta(seconds=resync_interval)
+        self.resync_time = datetime.utcnow() + timedelta(seconds=resync_interval)
         self.lfcs = None
         self.added = True
+
     @classmethod
     def from_pid(cls, pid, resync_interval=180):
-        return cls(PID2FC(pid),resync_interval)
+        return cls(PID2FC(pid), resync_interval)
+
 
 class FLists(object):
     def __init__(self):
@@ -42,33 +43,39 @@ class FLists(object):
         self.remove = list()
         self.newlfcs = queue.Queue()
 
-## FC2PID(pid)
-## convert a pid to the friend code
+
+# FC2PID(pid)
+# convert a pid to the friend code
 def PID2FC(principal_id):
     checksum = hashlib.sha1(struct.pack('<L', principal_id)).digest()[0] >> 1
     return '{:012d}'.format(principal_id | checksum << 32)
 
-## is_valid_fc(fc)
-## generates checksum from pid and compares checksum byte to generated checksum
+
+# is_valid_fc(fc)
+# generates checksum from pid and compares checksum byte to generated checksum
 def is_valid_fc(fc):
-    cur_cs = int(fc)>>32
+    cur_cs = int(fc) >> 32
     principal_id = int(fc) & 0xffffffff
     checksum = hashlib.sha1(struct.pack('<L', principal_id)).digest()[0] >> 1
     return cur_cs == checksum
 
-## FC2PID(fc)
-## convert a friend code to the pid, just removes the checksum
+
+# FC2PID(fc)
+# convert a friend code to the pid, just removes the checksum
 def FC2PID(fc):
     return int(fc) & 0xffffffff
 
+
 def FormattedFriendCode(fc):
-    return fc[0:4]+"-"+fc[4:8]+"-"+fc[8:12]
+    return f"{fc[0:4]} - {fc[4:8]} - {fc[8:12]}"
+
 
 class NASCInteractor(object):
 
     @classmethod
     def nintendo_base64_encode(cls, data):
         return base64.b64encode(data).decode('ascii').replace('+', '.').replace('/', '-').replace('=', '*')
+
     @classmethod
     def nintendo_base64_decode(cls, s):
         return base64.b64decode(s.replace('.', '+').replace('-', '/').replace('*', '='))
@@ -87,9 +94,9 @@ class NASCInteractor(object):
             'makercd': b'00',
             'servertype': b'L1',
             'fpdver': b'000D',
-            'unitcd': b'2', # ?
-            'macadr': identity['mac_address'].encode('ascii'), # 3DS' wifi MAC
-            'bssid': identity['bssid'].encode('ascii'), # current AP's wifi MAC
+            'unitcd': b'2',  # ?
+            'macadr': identity['mac_address'].encode('ascii'),  # 3DS' wifi MAC
+            'bssid': identity['bssid'].encode('ascii'),  # current AP's wifi MAC
             'apinfo': identity['apinfo'].encode('ascii'),
             'fcdcert': open(identity['cert_filename'], 'rb').read(),
             'devname': identity['name'].encode('utf16'),
@@ -97,11 +104,11 @@ class NASCInteractor(object):
             'lang': b'01',
             'region': b'02',
             'csnum': identity['serial'].encode('ascii'),
-            'uidhmac': identity['uid_hmac'].encode('ascii'), # TODO: figure out how this is calculated. b'213dc099',
+            'uidhmac': identity['uid_hmac'].encode('ascii'),  # TODO: figure out how this is calculated. b'213dc099',
             'userid': str(identity['user_id']).encode('ascii'),
             'action': b'LOGIN',
             'ingamesn': b''
-            }
+        }
         self.blob_enc = {}
         for k in self.blob:
             self.blob_enc[k] = NASCInteractor.nintendo_base64_encode(self.blob[k])
@@ -111,7 +118,8 @@ class NASCInteractor(object):
         self.password = identity['password']
         self.token = None
         self.lfcs = identity['lfcs']
-        self.connected=False
+        self.connected = False
+
     def getNASCBits(self):
         print(f"Getting a NASC token for {self.blob['csnum'].decode('ascii')}..")
         with open("nasc_response.txt") as f:
@@ -125,8 +133,8 @@ class NASCInteractor(object):
         self.port = int(port)
 
     async def connect(self):
-        self.ErrorCount=0
-        if not self.client is None:
+        self.ErrorCount = 0
+        if self.client is not None:
             self.disconnect()
             time.sleep(3)
         self.getNASCBits()
@@ -137,99 +145,109 @@ class NASCInteractor(object):
         )
         self.backend = backend.connect(
             set,
-            self.host, 
+            self.host,
             self.port
         )
         self.backend.login(
             self.pid,
             self.password,
-            auth_info = None,
+            auth_info=None,
             # is this needed??
             # login_data = friends.AccountExtraInfo(168823937, 2134704128, self.token)
         )
         self.client = friends.FriendsClientV1(self.backend)
-        self.connected=True
+        self.connected = True
 
     def disconnect(self):
-        if not self.backend is None:
-            self.ErrorCount=0
+        if self.backend is not None:
+            self.ErrorCount = 0
             self.backend.close()
             self.backend = None
             self.client = None
-            self.connected=False
-        
+            self.connected = False
+
     def reconnect(self):
         self.disconnect()
         self.connect()
+
     def IsConnected(self):
         self.connected = self.PRUDUP_isConnected()
         return self.connected
+
     def PRUDUP_isConnected(self):
-        ## client is FriendsClientV1
-        if not self.client is None:
-        ## client.client is backend.secure_client (service client)
-            if not self.client.client is None:
-        ## client.client.client is prudp client (which is what i see failing)
-                if not self.client.client.client is None:
+        # client is FriendsClientV1
+        if self.client is not None:
+            # client.client is backend.secure_client (service client)
+            if self.client.client is not None:
+                # client.client.client is prudp client (which is what i see failing)
+                if self.client.client.client is not None:
                     return self.client.client.client.is_connected()
         return False
-    def SetNotificationHandler(self,handler_function):
-        if self.connected == True:
+
+    def SetNotificationHandler(self, handler_function):
+        if self.connected:
             self.backend.nintendo_notification_server.handler = handler_function()
             return True
         return False
+
     def _ConnectionError(self):
         self.ErrorCount += 1
+
     def _ConnectionSuccess(self):
         self.ErrorCount = 0
+
     def Error(self):
         return self.ErrorCount
-    ##AddFriendPID(pid)
-    ## Adds a friend based on pid but only if prdudp is connected
-    async def AddFriendPID(self,pid):
+
+    # AddFriendPID(pid)
+    # Adds a friend based on pid but only if prdudp is connected
+    async def AddFriendPID(self, pid):
         if not self.PRUDUP_isConnected():
             self._ConnectionError()
-            print("[",datetime.now(),"] Unable to add friend:",FormattedFriendCode(PID2FC(pid)))
+            print(f"[ {datetime.now()} ] Unable to add friend: {FormattedFriendCode(PID2FC(pid))}")
             return None
         rel = await self.client.add_friend_by_principal_id(self.lfcs, pid)
-        #TODO: HANDLE ERRORS RETURNED
-        print("[",datetime.now(),"] Added friend:",FormattedFriendCode(PID2FC(pid)))
+        # TODO: HANDLE ERRORS RETURNED
+        print(f"[ {datetime.now()} ] Added friend: {FormattedFriendCode(PID2FC(pid))}")
         return rel
-    ## AddFriendFC(fc)
-    ## adds a friend by friend code, converts fc to pid and then calls AddFriendPID
-    async def AddFriendFC(self,fc):
+
+    # AddFriendFC(fc)
+    # adds a friend by friend code, converts fc to pid and then calls AddFriendPID
+    async def AddFriendFC(self, fc):
         return await self.AddFriendPID(FC2PID(fc))
 
-    async def RemoveFriendPID(self,pid):
+    async def RemoveFriendPID(self, pid):
         if not self.PRUDUP_isConnected():
             self._ConnectionError()
-            print("[",datetime.now(),"] Unable to remove friend:",FormattedFriendCode(PID2FC(pid)))
+            print(f"[ {datetime.now()} ] Unable to remove friend: {FormattedFriendCode(PID2FC(pid))}")
             return False
-        ##TODO: MORE HANDLING ERRORS
-        rel = await self.client.remove_friend_by_principal_id(pid)
-        print("[",datetime.now(),"] Removed friend:",FormattedFriendCode(PID2FC(pid)))
+        # TODO: MORE HANDLING ERRORS
+        await self.client.remove_friend_by_principal_id(pid)
+        print(f"[ {datetime.now()} ] Removed friend: {FormattedFriendCode(PID2FC(pid))}")
         return True
 
-    def RemoveFriendFC(self,fc):
+    def RemoveFriendFC(self, fc):
         return self.RemoveFriendPID(FC2PID(fc))
 
-    async def RefreshFriendData(self,pid):
+    async def RefreshFriendData(self, pid):
         try:
             x = await self.client.sync_friend(self.lfcs, [pid], [])
             self._ConnectionSuccess()
             if len(x) > 0:
                 return x[0]
-        except:
+        except Exception:
             self._ConnectionError()
         return None
-    async def RefreshAllFriendData(self,pids):
+
+    async def RefreshAllFriendData(self, pids):
         try:
             self._ConnectionSuccess()
-            x = await self.client.sync_friend(self.lfcs, pids, [])
-        except:
+            await self.client.sync_friend(self.lfcs, pids, [])
+        except Exception:
             self._ConnectionError()
             return []
-    async def UpdatePresence(self,gameid,msg,Unk = True):
+
+    async def UpdatePresence(self, gameid, msg, Unk=True):
         if not self.PRUDUP_isConnected():
             self._ConnectionError()
             return None
@@ -237,12 +255,13 @@ class NASCInteractor(object):
             self._ConnectionSuccess()
             presence = friends.NintendoPresence(0xffffffff, friends.GameKey(gameid, 0), msg, 0, 0, 0, 0, 0, 0, b"")
             await self.client.update_presence(presence, Unk)
+
     async def GetAllFriends(self):
         try:
             x = await self.client.get_all_friends()
-            logging.info("Got all friends: %s",len(x))
+            logging.info("Got all friends: %s", len(x))
             self._ConnectionSuccess()
             return x
-        except:
+        except Exception:
             self._ConnectionError()
             return []
