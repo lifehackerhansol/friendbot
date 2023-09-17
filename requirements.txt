@@ -1,5 +1,5 @@
 urllib3
 pyyaml
-requests
+aiohttp
 beautifulsoup4
 nintendoclients~=1.0.0

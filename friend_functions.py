@@ -156,10 +156,10 @@ class NASCInteractor(object):
         self.client = friends.FriendsClientV1(client)
         self.connected = True
 
-    def disconnect(self):
+    async def disconnect(self):
         if self.backend is not None:
             self.ErrorCount = 0
-            self.backend.close()
+            await self.backend.close()
             self.backend = None
             self.client = None
             self.connected = False
@@ -224,8 +224,8 @@ class NASCInteractor(object):
         print(f"[ {datetime.now()} ] Removed friend: {FormattedFriendCode(PID2FC(pid))}")
         return True
 
-    def RemoveFriendFC(self, fc):
-        return self.RemoveFriendPID(FC2PID(fc))
+    async def RemoveFriendFC(self, fc):
+        return await self.RemoveFriendPID(FC2PID(fc))
 
     async def RefreshFriendData(self, pid):
         try:

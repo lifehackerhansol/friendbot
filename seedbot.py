@@ -2,9 +2,8 @@ import asyncio
 import logging
 import random
 import sys
-import threading
-import time
 
+import aiohttp
 import yaml
 import urllib3
 from datetime import datetime, timedelta
@@ -69,13 +68,13 @@ identity = yaml.safe_load(open(identity_path, 'r'))
 
 # VARIABLES AND SHIT
 
+Web: webhandler.WebsiteHandler
+
 RunSettings = cSettings(identity['user_id'], identity['lfcs'])
 FriendList = friend_functions.FLists()
 NASCClient = friend_functions.NASCInteractor(identity)
 
 weburl = "http://part1dumper.nintendohomebrew.com"
-
-Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
 
 
 random_games = [
@@ -132,7 +131,7 @@ async def Handle_LFCSQueue():
                 FriendList.lfcs.append(p)
                 continue
             p.lfcs = rel.friend_code
-        if not Web.UpdateLFCS(p.fc, p.lfcs):
+        if not await Web.UpdateLFCS(p.fc, p.lfcs):
             logging.warning("LFCS failed to upload for %s", friend_functions.FormattedFriendCode(p.fc))
             print(f"LFCS failed to uploaded for fc {friend_functions.FormattedFriendCode(p.fc)}")
             FriendList.lfcs.append(p)
@@ -144,14 +143,14 @@ async def Handle_LFCSQueue():
     return True
 
 
-def Handle_FriendTimeouts():
+async def Handle_FriendTimeouts():
     global FriendList, Web
     oldfriends = [x for x in FriendList.added if (datetime.utcnow() - timedelta(seconds=Intervals.friend_timeout)) > x.added_time]
     FriendList.added = [x for x in FriendList.added if (datetime.utcnow() - timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
     for x in oldfriends:
         logging.warning("Friend Code Timeout: %s", friend_functions.FormattedFriendCode(x.fc))
         print(f"Friend code timeout: {friend_functions.FormattedFriendCode(x.fc)}")
-        if Web.TimeoutFC(x.fc):
+        if await Web.TimeoutFC(x.fc):
             FriendList.remove.append(x.pid)
         else:
             return False
@@ -165,7 +164,7 @@ async def Handle_ReSync():
             if datetime.utcnow() < p.resync_time:
                 continue
             print(f"ReSync: {friend_functions.FormattedFriendCode(p.fc)} | {len(FriendList.added)} friends currently")
-            asyncio.sleep(Intervals.betweenNintendoActions)
+            await asyncio.sleep(Intervals.betweenNintendoActions)
             logging.info("ReSync: Checking friend for completion, refreshing: %s", friend_functions.FormattedFriendCode(p.fc))
             p.resync_time = datetime.utcnow() + timedelta(seconds=Intervals.resync)
 #            if p.added == False:
@@ -212,7 +211,7 @@ async def UnClaimAll():
     for x in FriendList.added[:]:
         logging.info("Attempting to unclaim: %s", friend_functions.FormattedFriendCode(x.fc))
         print(f"Attempting to unclaim {friend_functions.FormattedFriendCode(x.fc)}")
-        if Web.ResetFC(x.fc):
+        if await Web.ResetFC(x.fc):
             logging.info("Successfully unclaimed %s", friend_functions.FormattedFriendCode(x.fc))
             print(f"Successfully unclaimed {friend_functions.FormattedFriendCode(x.fc)}")
             FriendList.added.remove(x)
@@ -220,7 +219,7 @@ async def UnClaimAll():
     for x in FriendList.notadded[:]:
         logging.info("Attempting to unclaim: %s", friend_functions.FormattedFriendCode(x))
         print(f"Attempting to unclaim {friend_functions.FormattedFriendCode(x)}")
-        if Web.ResetFC(x):
+        if await Web.ResetFC(x):
             logging.info("Successfully unclaimed %s", friend_functions.FormattedFriendCode(x))
             print(f"Successfully unclaimed {friend_functions.FormattedFriendCode(x)}")
             FriendList.notadded.remove(x)
@@ -230,7 +229,7 @@ async def UnClaimAll():
 async def Handle_RemoveQueue():
     global NASCClient, FriendList
     for x in FriendList.remove[:]:
-        asyncio.sleep(Intervals.betweenNintendoActions)
+        await asyncio.sleep(Intervals.betweenNintendoActions)
         # pid = x
         resp = await NASCClient.RemoveFriendPID(x)
         if resp:
@@ -257,7 +256,7 @@ async def HandleNewFriends():
             continue
         logging.info("Adding friend %s", friend_functions.FormattedFriendCode(fc))
         # print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
-        asyncio.sleep(Intervals.betweenNintendoActions)
+        await asyncio.sleep(Intervals.betweenNintendoActions)
         # TODO error check this vvv
         rel = await NASCClient.AddFriendFC(fc)
         if rel is not None:
@@ -275,15 +274,15 @@ async def HandleNewFriends():
 async def sh_thread():
     global RunSettings, NASCClient, FriendList
     # print("Running bot as",myFriendCode[0:4]+"-"+myFriendCode[4:8]+"-"+myFriendCode[8:])
-    while RunSettings.Running:
+    if RunSettings.Running:
         try:
             if datetime.utcnow() < RunSettings.PauseUntil:
-                continue
+                return
             if not Web.IsConnected():
                 RunSettings.PauseUntil = datetime.utcnow() + timedelta(seconds=Intervals.error_wait)
                 print(f"Web Server Connection Failed, waiting {Intervals.error_wait} seconds")
                 logging.error("Web Server Connection Failed. Waiting %s seconds", Intervals.error_wait)
-                continue
+                return
             if RunSettings.ReconnectNintendo:
                 NASCClient.reconnect()
                 RunSettings.ReconnectNintendo = False
@@ -296,13 +295,13 @@ async def sh_thread():
                 # print("Nintendo Connection Failed, waiting",Intervals.nintendo_wait,"seconds")
                 # logging.error("Nintendo Connection Failed. Waiting %s seconds",Intervals.nintendo_wait)
                 RunSettings.Running = False
-                continue
+                return
             if Web.TotalErrors > 30:
                 await UnClaimAll()
                 print("Server Errors exceeded threshold. Exiting")
                 RunSettings.Running = False
-                continue
-            clist = Web.getClaimedList()
+                return
+            clist = await Web.getClaimedList()
             # if the site doesnt have a fc as claimed, i shouldnt either
             # unfriend anyone on my list that the website doesnt have for me
             toremove = [x.pid for x in FriendList.added if x.fc not in clist]
@@ -323,32 +322,32 @@ async def sh_thread():
                 print(len(clist), " friends already claimed, queued for adding")
             FriendList.notadded.extend(clist)
             # Receives current relationship status for all friends, then iterates through them to set the lfcs status if not currently set
-            asyncio.sleep(Intervals.between_actions)
+            await asyncio.sleep(Intervals.between_actions)
             logging.info("Resyncing friend list")
             await Handle_ReSync()
-            asyncio.sleep(Intervals.between_actions)
+            await asyncio.sleep(Intervals.between_actions)
             # iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
             if not await Handle_LFCSQueue():
                 logging.error("Could not completed LFCS queue processing")
                 print("could not complete LFCS queue processing")
-            asyncio.sleep(Intervals.between_actions)
+            await asyncio.sleep(Intervals.between_actions)
             # true if it makes it through the list, false otherwise
-            if not Handle_FriendTimeouts():
+            if not await Handle_FriendTimeouts():
                 logging.error("Could not completed friend timeout processing")
                 print("could not Timeout old friends")
-            asyncio.sleep(Intervals.between_actions)
+            await asyncio.sleep(Intervals.between_actions)
             # iterates through removal queue, uploads lfcs to website. returns false if the process fails somewhere
             if not await Handle_RemoveQueue():
                 logging.error("Could not completed Remove queue processing")
                 print("Could not handle RemoveQueue")
-                continue
+                return
             if datetime.utcnow() >= RunSettings.WaitForFriending:
-                asyncio.sleep(Intervals.between_actions)
+                await asyncio.sleep(Intervals.between_actions)
                 logging.info("Getting New FCs. Currently %s added, %s lfcs", len(FriendList.added), len(FriendList.lfcs))
                 # print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
-                nlist = Web.getNewList()
+                nlist = await Web.getNewList()
                 for x in nlist:
-                    if Web.ClaimFC(x):
+                    if await Web.ClaimFC(x):
                         logging.info("Claimed %s", friend_functions.FormattedFriendCode(x))
                         print("Claimed", friend_functions.FormattedFriendCode(x))
                         FriendList.notadded.append(x)
@@ -356,7 +355,7 @@ async def sh_thread():
             if len(FriendList.notadded) > 0:
                 logging.info("%s new FCs to process", len(FriendList.notadded))
                 # print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
-            asyncio.sleep(Intervals.between_actions)
+            await asyncio.sleep(Intervals.between_actions)
             await HandleNewFriends()
 
         except Exception as e:
@@ -366,17 +365,17 @@ async def sh_thread():
 
 async def presence_thread():
     global RunSettings
-    while RunSettings.Running:
-        asyncio.sleep(30)
+    if RunSettings.Running:
+        await asyncio.sleep(30)
         if datetime.utcnow() < RunSettings.PauseUntil:
-            continue
+            return
         await update_presence()
 
 
 async def heartbeat_thread():
     global Web, NASCClient, RunSettings
-    while RunSettings.Running:
-        asyncio.sleep(30)
+    if RunSettings.Running:
+        await asyncio.sleep(30)
         Web.SetActive(RunSettings.active)
         toggle, run = Web.GetBotSettings()
         if toggle:
@@ -387,16 +386,18 @@ async def heartbeat_thread():
         Web.SetActive(RunSettings.active)
         if not RunSettings.Running:
             RunSettings.Running = run
-        Web.getNewList()
-        RunSettings.BotterCount = Web.BottersOnlineCount()
+        await Web.getNewList()
+        RunSettings.BotterCount = await Web.BottersOnlineCount()
 
 
 async def main(client):
+    global Web
     print("Running system as", RunSettings.friendcode)
 
     if not RunSettings.UI:
         print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
-
+    Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
+    Web.session = aiohttp.ClientSession()
     Web.ResetBotSettings()
     await NASCClient.connect(client)
     NASCClient.SetNotificationHandler(NotificationHandler)
@@ -415,21 +416,10 @@ async def main(client):
     RunSettings.CurrentGame = random.choice(random_games)
     await update_presence()
 
-    sh_thread_obj = threading.Thread(target=sh_thread)
-    sh_thread_obj.daemon = True
-    sh_thread_obj.start()
-
-
-    whb_thread_obj = threading.Thread(target=heartbeat_thread)
-    whb_thread_obj.daemon = True
-    whb_thread_obj.start()
-
-    p_thread_obj = threading.Thread(target=presence_thread)
-    p_thread_obj.daemon = True
-    p_thread_obj.start()
-
-    sh_thread_obj.join()
-
+    while RunSettings.Running:
+        await heartbeat_thread()
+        await presence_thread()
+        await sh_thread()
 
     print("Application quit initiated, closing")
     print("Removing friends")
@@ -445,15 +435,15 @@ async def main(client):
         fc = rmlist[0]
         rmlist.pop(0)
         print("Removing", fc)
-        if Web.ResetFC(fc):
-            asyncio.sleep(Intervals.betweenNintendoActions)
-            NASCClient.RemoveFriendFC(fc)
+        if await Web.ResetFC(fc):
+            await asyncio.sleep(Intervals.betweenNintendoActions)
+            await NASCClient.RemoveFriendFC(fc)
         else:
             rmlist.append(fc)
     print("All Friends removed")
     print("Disconnected NASC Client")
-    NASCClient.UpdatePresence(RunSettings.CurrentGame, "goodbyte", False)
-    NASCClient.disconnect()
+    await NASCClient.UpdatePresence(RunSettings.CurrentGame, "goodbyte", False)
+    await NASCClient.disconnect()
 
 
 async def bootstrap():
@@ -474,8 +464,8 @@ async def bootstrap():
             auth_info=None,
             # is this needed??
             # login_data = friends.AccountExtraInfo(168823937, 2134704128, NASCClient.token)
-        ) as backendclient:
-            await main(backendclient)
+        ) as rmcclient:
+            await main(rmcclient)
 
 
 if __name__ == "__main__":
