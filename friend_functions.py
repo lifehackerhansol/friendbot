@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta
 
 import urllib3
-from nintendo.nex import backend, friends, settings
+from nintendo.nex import backend, friends, prudp, settings
 
 from const import Const
 
@@ -147,30 +147,13 @@ class NASCInteractor(object):
         self.host, port = bits_dec['locator'].decode().split(':')
         self.port = int(port)
 
-    async def connect(self):
+    async def connect(self, client):
         self.ErrorCount = 0
         if self.client is not None:
             self.disconnect()
             time.sleep(3)
-        self.getNASCBits()
-        set = settings.Settings('friends')
-        set.configure(
-            Friends3DS.ACCESS_KEY,
-            Friends3DS.NEX_VERSION
-        )
-        self.backend = backend.connect(
-            set,
-            self.host,
-            self.port
-        )
-        self.backend.login(
-            self.pid,
-            self.password,
-            auth_info=None,
-            # is this needed??
-            # login_data = friends.AccountExtraInfo(168823937, 2134704128, self.token)
-        )
-        self.client = friends.FriendsClientV1(self.backend)
+        self.backend = client
+        self.client = friends.FriendsClientV1(client)
         self.connected = True
 
     def disconnect(self):
@@ -186,22 +169,22 @@ class NASCInteractor(object):
         self.connect()
 
     def IsConnected(self):
-        self.connected = self.PRUDUP_isConnected()
+        self.connected = self.PRUDP_isConnected()
         return self.connected
 
-    def PRUDUP_isConnected(self):
+    def PRUDP_isConnected(self):
         # client is FriendsClientV1
         if self.client is not None:
             # client.client is backend.secure_client (service client)
             if self.client.client is not None:
                 # client.client.client is prudp client (which is what i see failing)
                 if self.client.client.client is not None:
-                    return self.client.client.client.is_connected()
+                    return self.client.client.client.state == prudp.STATE_CONNECTED
         return False
 
     def SetNotificationHandler(self, handler_function):
         if self.connected:
-            self.backend.nintendo_notification_server.handler = handler_function()
+            self.backend.register_server = handler_function()
             return True
         return False
 
@@ -217,7 +200,7 @@ class NASCInteractor(object):
     # AddFriendPID(pid)
     # Adds a friend based on pid but only if prdudp is connected
     async def AddFriendPID(self, pid):
-        if not self.PRUDUP_isConnected():
+        if not self.PRUDP_isConnected():
             self._ConnectionError()
             print(f"[ {datetime.now()} ] Unable to add friend: {FormattedFriendCode(PID2FC(pid))}")
             return None
@@ -232,7 +215,7 @@ class NASCInteractor(object):
         return await self.AddFriendPID(FC2PID(fc))
 
     async def RemoveFriendPID(self, pid):
-        if not self.PRUDUP_isConnected():
+        if not self.PRUDP_isConnected():
             self._ConnectionError()
             print(f"[ {datetime.now()} ] Unable to remove friend: {FormattedFriendCode(PID2FC(pid))}")
             return False
@@ -263,7 +246,7 @@ class NASCInteractor(object):
             return []
 
     async def UpdatePresence(self, gameid, msg, Unk=True):
-        if not self.PRUDUP_isConnected():
+        if not self.PRUDP_isConnected():
             self._ConnectionError()
             return None
         else:

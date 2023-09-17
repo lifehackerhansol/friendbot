@@ -8,7 +8,7 @@ import time
 import yaml
 import urllib3
 from datetime import datetime, timedelta
-from nintendo.nex import nintendonotification
+from nintendo.nex import backend, nintendonotification, settings
 
 import friend_functions
 import webhandler
@@ -75,6 +75,9 @@ NASCClient = friend_functions.NASCInteractor(identity)
 
 weburl = "http://part1dumper.nintendohomebrew.com"
 
+Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
+
+
 random_games = [
     # Skylanders games
     0x0004000000165E00, 0x0004000000131200, 0x0004000000036E00, 0x0004000000091D00, 0x00040000000E6500,
@@ -95,6 +98,7 @@ async def update_presence():
 
 class NotificationHandler(nintendonotification.NintendoNotificationServer):
     def __init__(self):
+        super().__init__()
         self.name_cache = {}
 
     def process_notification_event(self, event):
@@ -202,9 +206,9 @@ async def Handle_ReSync():
     return True
 
 
-def UnClaimAll():
+async def UnClaimAll():
     global Web, FriendList
-    Handle_LFCSQueue()
+    await Handle_LFCSQueue()
     for x in FriendList.added[:]:
         logging.info("Attempting to unclaim: %s", friend_functions.FormattedFriendCode(x.fc))
         print(f"Attempting to unclaim {friend_functions.FormattedFriendCode(x.fc)}")
@@ -268,7 +272,7 @@ async def HandleNewFriends():
                 FriendList.added.append(friend_functions.process_friend(fc))
 
 
-def sh_thread():
+async def sh_thread():
     global RunSettings, NASCClient, FriendList
     # print("Running bot as",myFriendCode[0:4]+"-"+myFriendCode[4:8]+"-"+myFriendCode[8:])
     while RunSettings.Running:
@@ -324,7 +328,7 @@ def sh_thread():
             Handle_ReSync()
             time.sleep(Intervals.between_actions)
             # iterates through lfcs queue, uploads lfcs to website. returns false if the process fails somewhere
-            if not Handle_LFCSQueue():
+            if not await Handle_LFCSQueue():
                 logging.error("Could not completed LFCS queue processing")
                 print("could not complete LFCS queue processing")
             time.sleep(Intervals.between_actions)
@@ -387,15 +391,14 @@ def heartbeat_thread():
         RunSettings.BotterCount = Web.BottersOnlineCount()
 
 
-async def main():
+async def main(client):
     print("Running system as", RunSettings.friendcode)
 
     if not RunSettings.UI:
         print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
 
-    Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
     Web.ResetBotSettings()
-    await NASCClient.connect()
+    await NASCClient.connect(client)
     NASCClient.SetNotificationHandler(NotificationHandler)
 
     # all = client.get_all_friends()
@@ -452,6 +455,29 @@ async def main():
     print("Disconnected NASC Client")
     NASCClient.UpdatePresence(RunSettings.CurrentGame, "goodbyte", False)
     NASCClient.disconnect
+
+
+async def bootstrap():
+    NASCClient.getNASCBits()
+    set = settings.Settings('friends')
+    set.configure(
+        friend_functions.Friends3DS.ACCESS_KEY,
+        friend_functions.Friends3DS.NEX_VERSION
+    )
+    async with backend.connect(
+        set,
+        NASCClient.host,
+        NASCClient.port
+    ) as client:
+        async with client.login(
+            NASCClient.pid,
+            NASCClient.password,
+            auth_info=None,
+            # is this needed??
+            # login_data = friends.AccountExtraInfo(168823937, 2134704128, NASCClient.token)
+        ) as backendclient:
+            main(backendclient)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
