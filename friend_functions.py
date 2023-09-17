@@ -251,7 +251,19 @@ class NASCInteractor(object):
             return None
         else:
             self._ConnectionSuccess()
-            presence = friends.NintendoPresence(0xffffffff, friends.GameKey(gameid, 0), msg, 0, 0, 0, 0, 0, 0, b"")
+            gamekey = friends.GameKey()
+            gamekey.title_id = gameid
+            presence = friends.NintendoPresence()
+            presence.changed_bit_flag = 0xFFFFFFFF
+            presence.game_key = gamekey
+            presence.game_mode_description = msg
+            presence.join_availability_flag = 0
+            presence.matchmake_system_type = 0
+            presence.join_game_id = 0
+            presence.join_game_mode = 0
+            presence.owner_pid = 0
+            presence.join_group_id = 0
+            presence.application_data = b""
             await self.client.update_presence(presence, Unk)
 
     async def GetAllFriends(self):
