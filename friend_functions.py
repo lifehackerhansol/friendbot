@@ -7,12 +7,27 @@ import time
 from datetime import datetime, timedelta
 
 import urllib3
-from nintendo import games
 from nintendo.nex import backend, friends, settings
 
 from const import Const
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class Friends3DS:
+	TITLE_ID_EUR = 0x0004013000003202
+	TITLE_ID_USA = 0x0004013000003202
+	TITLE_ID_JAP = 0x0004013000003202
+	LATEST_VERSION = 20
+
+	# Friends 3DS has no product code
+	PRODUCT_CODE_EUR = "----"
+	PRODUCT_CODE_USA = "----"
+	PRODUCT_CODE_JAP = "----"
+
+	GAME_SERVER_ID = 0x3200
+	ACCESS_KEY = "ridfebb9"
+	NEX_VERSION = 20000
 
 
 class NINTENDO_SERVER_ERROR(Const):
@@ -140,8 +155,8 @@ class NASCInteractor(object):
         self.getNASCBits()
         set = settings.Settings('friends')
         set.configure(
-            games.Friends3DS.ACCESS_KEY,
-            games.Friends3DS.NEX_VERSION
+            Friends3DS.ACCESS_KEY,
+            Friends3DS.NEX_VERSION
         )
         self.backend = backend.connect(
             set,
