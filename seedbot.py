@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import sys
@@ -359,43 +360,13 @@ def sh_thread():
             logging.error("Exception found: %s\n%s\n%s\n%s", e, sys.exc_info()[0].__name__, sys.exc_info()[2].tb_frame.f_code.co_filename, sys.exc_info()[2].tb_lineno)
 
 
-print("Running system as", RunSettings.friendcode)
-
-if not RunSettings.UI:
-    print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
-
-Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
-Web.ResetBotSettings()
-NASCClient.connect()
-NASCClient.SetNotificationHandler(NotificationHandler)
-
-# all = client.get_all_friends()
-# add current friends to list
-flist = []
-flist.extend(NASCClient.GetAllFriends())
-for r in flist:
-    p = friend_functions.process_friend.from_pid(r.principal_id, 1200)
-    if not r.is_complete:
-        FriendList.added.append(p)
-    else:
-        p.lfcs = r.friend_code
-        FriendList.lfcs.append(p)
-RunSettings.CurrentGame = random.choice(random_games)
-update_presence()
-
-
-sh_thread_obj = threading.Thread(target=sh_thread)
-sh_thread_obj.daemon = True
-sh_thread_obj.start()
-
-
-def presence_thread():
+async def presence_thread():
     global RunSettings
     while RunSettings.Running:
         time.sleep(30)
         if datetime.utcnow() < RunSettings.PauseUntil:
             continue
-        update_presence()
+        await update_presence()
 
 
 def heartbeat_thread():
@@ -416,37 +387,71 @@ def heartbeat_thread():
         RunSettings.BotterCount = Web.BottersOnlineCount()
 
 
-whb_thread_obj = threading.Thread(target=heartbeat_thread)
-whb_thread_obj.daemon = True
-whb_thread_obj.start()
+async def main():
+    print("Running system as", RunSettings.friendcode)
 
-p_thread_obj = threading.Thread(target=presence_thread)
-p_thread_obj.daemon = True
-p_thread_obj.start()
+    if not RunSettings.UI:
+        print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
 
-sh_thread_obj.join()
+    Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
+    Web.ResetBotSettings()
+    await NASCClient.connect()
+    NASCClient.SetNotificationHandler(NotificationHandler)
+
+    # all = client.get_all_friends()
+    # add current friends to list
+    flist = []
+    flist.extend(await NASCClient.GetAllFriends())
+    for r in flist:
+        p = friend_functions.process_friend.from_pid(r.principal_id, 1200)
+        if not r.is_complete:
+            FriendList.added.append(p)
+        else:
+            p.lfcs = r.friend_code
+            FriendList.lfcs.append(p)
+    RunSettings.CurrentGame = random.choice(random_games)
+    await update_presence()
 
 
-print("Application quit initiated, closing")
-print("Removing friends")
-# print("added friends list,",len(added_friends))
-# print("lfcs list,",len(lfcs_queue))
-# print("remove friends list,",len(remove_queue))
+    sh_thread_obj = threading.Thread(target=sh_thread)
+    sh_thread_obj.daemon = True
+    sh_thread_obj.start()
 
-rmlist = [x.fc for x in FriendList.added]
-rmlist.extend([x.fc for x in FriendList.lfcs])
-rmlist.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
 
-while len(rmlist) > 0:
-    fc = rmlist[0]
-    rmlist.pop(0)
-    print("Removing", fc)
-    if Web.ResetFC(fc):
-        time.sleep(Intervals.betweenNintendoActions)
-        NASCClient.RemoveFriendFC(fc)
-    else:
-        rmlist.append(fc)
-print("All Friends removed")
-print("Disconnected NASC Client")
-NASCClient.UpdatePresence(RunSettings.CurrentGame, "goodbyte", False)
-NASCClient.disconnect
+    whb_thread_obj = threading.Thread(target=heartbeat_thread)
+    whb_thread_obj.daemon = True
+    whb_thread_obj.start()
+
+    p_thread_obj = threading.Thread(target=presence_thread)
+    p_thread_obj.daemon = True
+    p_thread_obj.start()
+
+    sh_thread_obj.join()
+
+
+    print("Application quit initiated, closing")
+    print("Removing friends")
+    # print("added friends list,",len(added_friends))
+    # print("lfcs list,",len(lfcs_queue))
+    # print("remove friends list,",len(remove_queue))
+
+    rmlist = [x.fc for x in FriendList.added]
+    rmlist.extend([x.fc for x in FriendList.lfcs])
+    rmlist.extend([friend_functions.PID2FC(x) for x in FriendList.remove])
+
+    while len(rmlist) > 0:
+        fc = rmlist[0]
+        rmlist.pop(0)
+        print("Removing", fc)
+        if Web.ResetFC(fc):
+            time.sleep(Intervals.betweenNintendoActions)
+            NASCClient.RemoveFriendFC(fc)
+        else:
+            rmlist.append(fc)
+    print("All Friends removed")
+    print("Disconnected NASC Client")
+    NASCClient.UpdatePresence(RunSettings.CurrentGame, "goodbyte", False)
+    NASCClient.disconnect
+
+if __name__ == "__main__":
+    asyncio.run(main())
