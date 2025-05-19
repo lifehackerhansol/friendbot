@@ -366,7 +366,7 @@ async def sh_thread():
 async def presence_thread():
     global RunSettings
     while RunSettings.Running:
-        await asyncio.sleep(1)
+        await asyncio.sleep(30)
         if datetime.datetime.now(datetime.UTC) < RunSettings.PauseUntil:
             return
         await update_presence()
@@ -375,7 +375,7 @@ async def presence_thread():
 async def heartbeat_thread():
     global Web, NASCClient, RunSettings
     while RunSettings.Running:
-        await asyncio.sleep(1)
+        await asyncio.sleep(30)
         Web.SetActive(RunSettings.active)
         toggle, run = Web.GetBotSettings()
         if toggle:
