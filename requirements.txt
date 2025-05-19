@@ -2,4 +2,4 @@ urllib3
 pyyaml
 aiohttp
 beautifulsoup4
-nintendoclients~=1.0.0
+nintendoclients~=3.0.3
