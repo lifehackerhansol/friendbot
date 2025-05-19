@@ -394,8 +394,6 @@ async def main(client):
     global Web
     print("Running system as", RunSettings.friendcode)
 
-    if not RunSettings.UI:
-        print("\n\n********** Type \'q\' and press enter to quit at any time **************\n\n")
     Web = webhandler.WebsiteHandler(weburl, RunSettings.friendcode, RunSettings.active, RunSettings.version)
     Web.session = aiohttp.ClientSession()
     Web.ResetBotSettings()
