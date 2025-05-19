@@ -274,7 +274,7 @@ async def HandleNewFriends():
 async def sh_thread():
     global RunSettings, NASCClient, FriendList
     # print("Running bot as",myFriendCode[0:4]+"-"+myFriendCode[4:8]+"-"+myFriendCode[8:])
-    if RunSettings.Running:
+    while RunSettings.Running:
         try:
             if datetime.datetime.now(datetime.UTC) < RunSettings.PauseUntil:
                 return
@@ -365,7 +365,7 @@ async def sh_thread():
 
 async def presence_thread():
     global RunSettings
-    if RunSettings.Running:
+    while RunSettings.Running:
         await asyncio.sleep(1)
         if datetime.datetime.now(datetime.UTC) < RunSettings.PauseUntil:
             return
@@ -374,7 +374,7 @@ async def presence_thread():
 
 async def heartbeat_thread():
     global Web, NASCClient, RunSettings
-    if RunSettings.Running:
+    while RunSettings.Running:
         await asyncio.sleep(1)
         Web.SetActive(RunSettings.active)
         toggle, run = Web.GetBotSettings()
@@ -416,10 +416,7 @@ async def main(client):
     RunSettings.CurrentGame = random.choice(random_games)
     await update_presence()
 
-    while RunSettings.Running:
-        await heartbeat_thread()
-        await presence_thread()
-        await sh_thread()
+    await asyncio.gather(heartbeat_thread(), presence_thread(), sh_thread())
 
     print("Application quit initiated, closing")
     print("Removing friends")
