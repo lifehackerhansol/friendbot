@@ -4,7 +4,7 @@ import logging
 import queue
 import struct
 import time
-from datetime import datetime, timedelta
+import datetime
 
 import urllib3
 from nintendo.nex import backend, friends, prudp, settings
@@ -40,8 +40,8 @@ class process_friend:
     def __init__(self, fc, resync_interval=180):
         self.fc = fc
         self.pid = int(fc) & 0xffffffff
-        self.added_time = datetime.utcnow()
-        self.resync_time = datetime.utcnow() + timedelta(seconds=resync_interval)
+        self.added_time = datetime.datetime.now(datetime.UTC)
+        self.resync_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=resync_interval)
         self.lfcs = None
         self.added = True
 
@@ -202,11 +202,11 @@ class NASCInteractor(object):
     async def AddFriendPID(self, pid):
         if not self.PRUDP_isConnected():
             self._ConnectionError()
-            print(f"[ {datetime.now()} ] Unable to add friend: {FormattedFriendCode(PID2FC(pid))}")
+            print(f"[ {datetime.datetime.now()} ] Unable to add friend: {FormattedFriendCode(PID2FC(pid))}")
             return None
         rel = await self.client.add_friend_by_principal_id(self.lfcs, pid)
         # TODO: HANDLE ERRORS RETURNED
-        print(f"[ {datetime.now()} ] Added friend: {FormattedFriendCode(PID2FC(pid))}")
+        print(f"[ {datetime.datetime.now()} ] Added friend: {FormattedFriendCode(PID2FC(pid))}")
         return rel
 
     # AddFriendFC(fc)
@@ -217,11 +217,11 @@ class NASCInteractor(object):
     async def RemoveFriendPID(self, pid):
         if not self.PRUDP_isConnected():
             self._ConnectionError()
-            print(f"[ {datetime.now()} ] Unable to remove friend: {FormattedFriendCode(PID2FC(pid))}")
+            print(f"[ {datetime.datetime.now()} ] Unable to remove friend: {FormattedFriendCode(PID2FC(pid))}")
             return False
         # TODO: MORE HANDLING ERRORS
         await self.client.remove_friend_by_principal_id(pid)
-        print(f"[ {datetime.now()} ] Removed friend: {FormattedFriendCode(PID2FC(pid))}")
+        print(f"[ {datetime.datetime.now()} ] Removed friend: {FormattedFriendCode(PID2FC(pid))}")
         return True
 
     async def RemoveFriendFC(self, fc):

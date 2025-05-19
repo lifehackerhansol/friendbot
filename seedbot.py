@@ -6,7 +6,7 @@ import sys
 import aiohttp
 import yaml
 import urllib3
-from datetime import datetime, timedelta
+import datetime
 from nintendo.nex import backend, nintendonotification, settings
 
 import friend_functions
@@ -16,7 +16,7 @@ from const import Const
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-logname = f"error_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+logname = f"error_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 # logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname, filemode='w', format='%(asctime)s %(message)s', level=logging.INFO)
 logging.info("Starting App")
@@ -33,17 +33,17 @@ class cSettings(object):
         self.BotterCount = 0
         self.ServerErrorCount = 0
         self.ReconnectNintendo = False
-        self.StartTime = datetime.utcnow()
-        self.RunTime = str(datetime.utcnow() - self.StartTime).split(".")[0]
+        self.StartTime = datetime.datetime.now(datetime.UTC)
+        self.RunTime = str(datetime.datetime.now(datetime.UTC) - self.StartTime).split(".")[0]
         self.Running = True
-        self.LastGameChange = datetime.utcnow()
+        self.LastGameChange = datetime.datetime.now(datetime.UTC)
         self.CurrentGame = 0x0004000000131200
-        self.PauseUntil = datetime.utcnow()
-        self.WaitForFriending = datetime.utcnow()
-        self.WaitForResync = datetime.utcnow()
+        self.PauseUntil = datetime.datetime.now(datetime.UTC)
+        self.WaitForFriending = datetime.datetime.now(datetime.UTC)
+        self.WaitForResync = datetime.datetime.now(datetime.UTC)
 
     def UpdateRunTime(self):
-        self.RunTime = str(datetime.utcnow() - self.StartTime).split(".")[0]
+        self.RunTime = str(datetime.datetime.now(datetime.UTC) - self.StartTime).split(".")[0]
 
 
 class Intervals(Const):
@@ -89,8 +89,8 @@ async def update_presence():
     global RunSettings
     global random_games
     global NASCClient
-    if datetime.utcnow() - RunSettings.LastGameChange > timedelta(seconds=Intervals.change_game):
-        RunSettings.LastGameChange = datetime.utcnow()
+    if datetime.datetime.now(datetime.UTC) - RunSettings.LastGameChange > datetime.timedelta(seconds=Intervals.change_game):
+        RunSettings.LastGameChange = datetime.datetime.now(datetime.UTC)
         RunSettings.CurrentGame = random.choice(random_games)
     await NASCClient.UpdatePresence(RunSettings.CurrentGame, 'Domo Arigato')
 
@@ -145,8 +145,8 @@ async def Handle_LFCSQueue():
 
 async def Handle_FriendTimeouts():
     global FriendList, Web
-    oldfriends = [x for x in FriendList.added if (datetime.utcnow() - timedelta(seconds=Intervals.friend_timeout)) > x.added_time]
-    FriendList.added = [x for x in FriendList.added if (datetime.utcnow() - timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
+    oldfriends = [x for x in FriendList.added if (datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=Intervals.friend_timeout)) > x.added_time]
+    FriendList.added = [x for x in FriendList.added if (datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=Intervals.friend_timeout)) <= x.added_time]
     for x in oldfriends:
         logging.warning("Friend Code Timeout: %s", friend_functions.FormattedFriendCode(x.fc))
         print(f"Friend code timeout: {friend_functions.FormattedFriendCode(x.fc)}")
@@ -161,30 +161,30 @@ async def Handle_ReSync():
     global FriendList, NASCClient
     try:
         for p in FriendList.added:
-            if datetime.utcnow() < p.resync_time:
+            if datetime.datetime.now(datetime.UTC) < p.resync_time:
                 continue
             print(f"ReSync: {friend_functions.FormattedFriendCode(p.fc)} | {len(FriendList.added)} friends currently")
             await asyncio.sleep(Intervals.betweenNintendoActions)
             logging.info("ReSync: Checking friend for completion, refreshing: %s", friend_functions.FormattedFriendCode(p.fc))
-            p.resync_time = datetime.utcnow() + timedelta(seconds=Intervals.resync)
+            p.resync_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=Intervals.resync)
 #            if p.added == False:
-#                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untilremove)
+#                p.resync_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds = Intervals.resync_untilremove)
 #                logging.info("ReSync: Checking friend for completion, Adding friend back: %s",friend_functions.FormattedFriendCode(p.fc))
-#               print("[",datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(p.fc))
+#               print("[",datetime.datetime.now(),"] ReSync: Adding friend back: ",friend_functions.FormattedFriendCode(p.fc))
 #                rel = NASCClient.AddFriendPID(p.pid)
 #                p.added = True
 #                if not rel is None:
 #                    if rel.is_complete==True:
 #                        logging.warning("ReSync: Friend was completed, adding to lfcs queue: %s",friend_functions.FormattedFriendCode(p.fc))
-#                        print("[",datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(p.fc))
+#                        print("[",datetime.datetime.now(),"] ReSync: Friend was completed, adding to lfcs queue: ",friend_functions.FormattedFriendCode(p.fc))
 #                       p.lfcs = rel.friend_code
 #                        FriendList.newlfcs.put(p)
 #            else:
 #                logging.info("ReSync: Checking friend for completion, Removing friend: %s",friend_functions.FormattedFriendCode(p.fc))
-#                print("[",datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(p.fc))
+#                print("[",datetime.datetime.now(),"] ReSync: Removing Friend: ",friend_functions.FormattedFriendCode(p.fc))
 #                rel = NASCClient.RemoveFriendPID(p.pid)
 #                p.added = False
-#                p.resync_time = datetime.utcnow() + timedelta(seconds = Intervals.resync_untiladd)
+#                p.resync_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds = Intervals.resync_untiladd)
 
             x = await NASCClient.RefreshFriendData(p.pid)
 
@@ -255,7 +255,7 @@ async def HandleNewFriends():
         if len([x for x in curFriends if x == fc]) > 0:
             continue
         logging.info("Adding friend %s", friend_functions.FormattedFriendCode(fc))
-        # print("[",datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
+        # print("[",datetime.datetime.now(),"] Adding friend:",friend_functions.FormattedFriendCode(fc))
         await asyncio.sleep(Intervals.betweenNintendoActions)
         # TODO error check this vvv
         rel = await NASCClient.AddFriendFC(fc)
@@ -276,10 +276,10 @@ async def sh_thread():
     # print("Running bot as",myFriendCode[0:4]+"-"+myFriendCode[4:8]+"-"+myFriendCode[8:])
     if RunSettings.Running:
         try:
-            if datetime.utcnow() < RunSettings.PauseUntil:
+            if datetime.datetime.now(datetime.UTC) < RunSettings.PauseUntil:
                 return
             if not Web.IsConnected():
-                RunSettings.PauseUntil = datetime.utcnow() + timedelta(seconds=Intervals.error_wait)
+                RunSettings.PauseUntil = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=Intervals.error_wait)
                 print(f"Web Server Connection Failed, waiting {Intervals.error_wait} seconds")
                 logging.error("Web Server Connection Failed. Waiting %s seconds", Intervals.error_wait)
                 return
@@ -287,7 +287,7 @@ async def sh_thread():
                 NASCClient.reconnect()
                 RunSettings.ReconnectNintendo = False
             if NASCClient.Error() > 0:
-                # RunSettings.PauseUntil = datetime.utcnow()+timedelta(seconds=Intervals.nintendo_wait)
+                # RunSettings.PauseUntil = datetime.datetime.now(datetime.UTC)+datetime.timedelta(seconds=Intervals.nintendo_wait)
                 await UnClaimAll()
                 # RunSettings.ReconnectNintendo = True
                 print("Nintendo Connection Failed, Exiting.")
@@ -341,20 +341,20 @@ async def sh_thread():
                 logging.error("Could not completed Remove queue processing")
                 print("Could not handle RemoveQueue")
                 return
-            if datetime.utcnow() >= RunSettings.WaitForFriending:
+            if datetime.datetime.now(datetime.UTC) >= RunSettings.WaitForFriending:
                 await asyncio.sleep(Intervals.between_actions)
                 logging.info("Getting New FCs. Currently %s added, %s lfcs", len(FriendList.added), len(FriendList.lfcs))
-                # print("[",datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
+                # print("[",datetime.datetime.now(),"] Getting New FCs. Currently",len(FriendList.added),"added,",len(FriendList.lfcs),"lfcs")
                 nlist = await Web.getNewList()
                 for x in nlist:
                     if await Web.ClaimFC(x):
                         logging.info("Claimed %s", friend_functions.FormattedFriendCode(x))
                         print("Claimed", friend_functions.FormattedFriendCode(x))
                         FriendList.notadded.append(x)
-                RunSettings.WaitForFriending = datetime.utcnow() + timedelta(seconds=Intervals.get_friends)
+                RunSettings.WaitForFriending = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=Intervals.get_friends)
             if len(FriendList.notadded) > 0:
                 logging.info("%s new FCs to process", len(FriendList.notadded))
-                # print ("[",datetime.now(),"]",len(FriendList.notadded),"new friends")
+                # print ("[",datetime.datetime.now(),"]",len(FriendList.notadded),"new friends")
             await asyncio.sleep(Intervals.between_actions)
             await HandleNewFriends()
 
@@ -367,7 +367,7 @@ async def presence_thread():
     global RunSettings
     if RunSettings.Running:
         await asyncio.sleep(1)
-        if datetime.utcnow() < RunSettings.PauseUntil:
+        if datetime.datetime.now(datetime.UTC) < RunSettings.PauseUntil:
             return
         await update_presence()
 
