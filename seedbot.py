@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import random
 import sys
 
@@ -16,7 +17,7 @@ from const import Const
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-logname = f"error_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+logname = f"logs/error_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 # logging.basicConfig(level=logging.WARN)
 logging.basicConfig(filename=logname, filemode='w', format='%(asctime)s %(message)s', level=logging.INFO)
 logging.info("Starting App")
@@ -464,4 +465,6 @@ async def bootstrap():
 
 
 if __name__ == "__main__":
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
     asyncio.run(bootstrap())
