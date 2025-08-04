@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  friendbot:
+    image: ghcr.io/lifehackerhansol/friendbot
+    volumes:
+      - ./logs:/home/friendbot/logs
+    secrets:
+      - clcerta
+      - identity
+      - nasc-response
+
+secrets:
+  clcerta:
+    file: ./ClCertA.pem
+  identity:
+    file: ./identity.yaml
+  nasc-response:
+    file: ./nasc_response.txt
